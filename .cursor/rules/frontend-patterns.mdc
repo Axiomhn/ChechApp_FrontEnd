@@ -1,0 +1,56 @@
+---
+description: Patrones React, API y UI para Chech App
+globs: src/**/*
+alwaysApply: false
+---
+
+# Patrones Frontend — Chech App
+
+## Llamadas API
+
+- Instancia Axios en `src/lib/axios.ts` (token desde Redux automáticamente)
+- Un archivo por dominio en `src/api/` con hooks de React Query:
+
+```typescript
+// src/api/ejemplo.ts
+export const useEjemploQuery = () => useQuery({ queryKey: ['ejemplo'], queryFn: ... })
+export const useEjemploMutation = () => useMutation({ mutationFn: ... })
+```
+
+- Mutations para escritura; queries para lectura con `queryKey` descriptivas
+
+## Autenticación
+
+- Login → `useLoginMutation` guarda tokens en Redux (`setCredentials`)
+- `AuthGuard` protege rutas; logout limpia Redux y redirige a `/login`
+- No guardar tokens fuera de Redux Persist
+
+## Formularios
+
+- `react-hook-form` + `yup` + `@hookform/resolvers/yup`
+- Validación en español; errores de servidor en UI del formulario
+
+## UI / Estilos
+
+- Componentes base: shadcn en `src/components/ui/`
+- Utilidad `cn()` de `@/lib/utils` para clases condicionales
+- Paleta y tokens semánticos en `src/index.css` (`@theme`)
+- Fuente: Geist Variable; títulos institucionales: `font-['Segoe_UI_Symbol']`
+- Iconos: `lucide-react`
+
+## Nuevas páginas protegidas
+
+Registrar en `App.tsx` dentro de `AuthGuard` > `MainLayout`:
+
+```tsx
+<Route element={<AuthGuard />}>
+  <Route element={<MainLayout />}>
+    <Route path="/" element={<DashboardPage />} />
+    <Route path="/nueva" element={<NuevaPage />} />
+  </Route>
+</Route>
+```
+
+## Socket.IO
+
+Importar `socket` desde `@/lib/socket`. Escuchar eventos en `useEffect` con cleanup `socket.off(...)`.

@@ -1,0 +1,37 @@
+---
+description: Convenciones del proceso principal de Electron
+globs: electron/**
+alwaysApply: false
+---
+
+# Electron — Chech App
+
+## Configuración actual (`electron/main.js`)
+
+- Sin menú de aplicación (`Menu.setApplicationMenu(null)`)
+- Ventana: 1385×800, mínimo 1385×700, maximizada al iniciar
+- **Dev**: carga `http://localhost:5173` + DevTools
+- **Producción**: carga `dist/index.html`
+- Icono: `public/icon.png` (dev) / `dist/icon.png` (packaged)
+
+## webPreferences (igual que generador-de-solvencias)
+
+```js
+webPreferences: {
+  nodeIntegration: true,
+  contextIsolation: false,
+}
+```
+
+No cambiar sin acordar migración a `preload` + `contextBridge`.
+
+## Empaquetado (`package.json` → `build`)
+
+- `appId`: `com.axiom.chech-app`
+- `productName`: `Chech App`
+- Output: carpeta `release/`
+- Target Windows: NSIS con directorio de instalación configurable
+
+## Vite
+
+`vite.config.mts` usa `base: "./"` — obligatorio para que Electron cargue assets en producción.

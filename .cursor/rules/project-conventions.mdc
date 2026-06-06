@@ -1,0 +1,55 @@
+---
+description: Convenciones generales de Chech App (Electron + React)
+alwaysApply: true
+---
+
+# Chech App — Convenciones del Proyecto
+
+Este proyecto replica la arquitectura de `generador-de-solvencias`. Mantener consistencia al agregar código.
+
+## Stack
+
+- **Electron 40** + **Vite 7** + **React 19** + **TypeScript**
+- **Tailwind CSS 4** + **shadcn/ui** (estilo `radix-nova`)
+- **React Query** → estado del servidor (API)
+- **Redux Toolkit + Persist** → solo autenticación
+- **Axios** (`src/lib/axios.ts`) con interceptor JWT
+- **Socket.IO** (`src/lib/socket.ts`) para eventos en tiempo real
+- **HashRouter** (requerido para Electron con `base: "./"`)
+
+## Estructura de carpetas
+
+```
+src/
+├── api/           # Hooks useQuery / useMutation por dominio (auth.ts, checks.ts, etc.)
+├── components/
+│   ├── auth/      # AuthGuard
+│   ├── layout/    # MainLayout, Navbar
+│   └── ui/        # Componentes shadcn (no editar manualmente salvo necesidad)
+├── lib/           # axios, socket, utils (cn)
+├── pages/         # Una página por ruta
+└── store/
+    └── slices/    # Redux slices (auth)
+electron/main.js   # Proceso principal Electron
+```
+
+## Rutas
+
+- Públicas: `/login`, `/design-system`
+- Protegidas (AuthGuard + MainLayout): `/`
+- Catch-all → `/login`
+
+## Alias de imports
+
+Usar siempre `@/` → `src/` (ej: `import api from "@/lib/axios"`).
+
+## Variables de entorno
+
+- `VITE_API_URL` → base URL del backend (default: `http://localhost:3000/api/v1`)
+- Copiar `.env.example` a `.env` para desarrollo local.
+
+## Scripts
+
+- `npm run electron-dev` — desarrollo (Vite + Electron)
+- `npm run build` — compilar React
+- `npm run dist` — build + instalador NSIS (Windows)

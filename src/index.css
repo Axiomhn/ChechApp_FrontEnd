@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Geist Variable', sans-serif;
+
+  /* Custom Color Palette */
+  --color-blue-50: #F0F7FF;
+  --color-blue-100: #DBEAFE;
+  --color-blue-200: #CBD5E1;
+  --color-blue-600: #2563EB;
+  --color-blue-700: #1F50BA;
+  --color-blue-900: #1E3A8A;
+
+  --color-green-50: #F0FDF4;
+  --color-green-600: #16A34A;
+  --color-green-700: #15803D;
+
+  --color-red-600: #DC2626;
+  --color-red-700: #B91C1C;
+  --color-red-800: #991B1B;
+
+  --color-gray-50: #FFFFFF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-950: #000000;
+
+  --color-beige-50: #FFF7ED;
+
+  --color-orange-600: #EA580C;
+  --color-orange-700: #C74806;
+  --color-orange-800: #A93E06;
+
+  /* Semantic Variables (Mapped to the above) */
+  --color-background: var(--color-gray-50);
+  --color-foreground: var(--color-gray-950);
+
+  --color-card: var(--color-gray-50);
+  --color-card-foreground: var(--color-gray-950);
+
+  --color-popover: var(--color-gray-50);
+  --color-popover-foreground: var(--color-gray-950);
+
+  --color-primary: var(--color-blue-600);
+  --color-primary-foreground: var(--color-gray-50);
+
+  --color-secondary: var(--color-blue-50);
+  --color-secondary-foreground: var(--color-blue-900);
+
+  --color-muted: var(--color-blue-200);
+  --color-muted-foreground: var(--color-gray-600);
+
+  --color-accent: var(--color-blue-100);
+  --color-accent-foreground: var(--color-blue-700);
+
+  --color-destructive: var(--color-red-600);
+  --color-destructive-foreground: var(--color-gray-50);
+
+  --color-border: var(--color-blue-200);
+  --color-input: var(--color-blue-200);
+  --color-ring: var(--color-blue-600);
+
+  /* Fallback aliases for @layer base usage */
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --border: var(--color-border);
+  --ring: var(--color-ring);
+
+  --radius: 0.625rem;
+}
+
+@layer base {
+
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border, currentColor);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+}
