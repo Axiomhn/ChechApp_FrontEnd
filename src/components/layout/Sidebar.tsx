@@ -1,8 +1,10 @@
+import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useDispatch, useSelector } from "react-redux"
 import { Landmark, Users, Sliders, LogOut, Droplets } from "lucide-react"
 import type { RootState } from "@/store"
 import { logout } from "@/store/slices/authSlice"
+import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const navItems = [
   { to: "/emission", icon: Landmark, label: "Emisión de Egresos" },
@@ -14,15 +16,14 @@ const Sidebar = () => {
   const user = useSelector((state: RootState) => state.auth.user)
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const displayName =
     user?.name || user?.nombre_completo || user?.email || "Usuario"
 
-  const handleLogout = () => {
-    if (window.confirm("¿Desea cerrar la sesión del sistema?")) {
-      dispatch(logout())
-      navigate("/login")
-    }
+  const handleConfirmLogout = () => {
+    dispatch(logout())
+    navigate("/login")
   }
 
   return (
@@ -65,13 +66,25 @@ const Sidebar = () => {
         <button
           type="button"
           className="btn btn-secondary btn-full btn-sm"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutModal(true)}
           style={{ justifyContent: "center", gap: "7px" }}
         >
           <LogOut size={15} />
           Cerrar Sesión
         </button>
       </div>
+
+      <ConfirmModal
+        open={showLogoutModal}
+        title="Cerrar Sesión"
+        message="¿Desea cerrar la sesión del sistema? Deberá ingresar sus credenciales nuevamente para acceder."
+        confirmLabel="Sí, cerrar sesión"
+        cancelLabel="Cancelar"
+        variant="danger"
+        icon="logout"
+        onConfirm={handleConfirmLogout}
+        onClose={() => setShowLogoutModal(false)}
+      />
     </aside>
   )
 }

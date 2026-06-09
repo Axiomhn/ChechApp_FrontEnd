@@ -1,3 +1,5 @@
+import type { CalibrationSettings, PrinterInfo } from "./calibration"
+
 export interface Provider {
   id: number
   nombre_razon: string
@@ -60,6 +62,8 @@ export interface ChechAppApi {
   }
   config: {
     getSettings: () => Promise<ApiResult<AppSettings>>
+    saveSettings: (settings: CalibrationSettings) => Promise<ApiResult>
+    getPrinters: () => Promise<PrinterInfo[]>
   }
   print: {
     nativeEscP: (

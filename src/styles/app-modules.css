@@ -18,6 +18,8 @@
   --success-bg: #EAF7EF;
   --danger: #C0392B;
   --danger-bg: #FEF0EE;
+  --warning: #D4820A;
+  --warning-bg: #FFF8E7;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -496,6 +498,18 @@
   color: var(--danger);
 }
 
+.app-shell .alert-warning {
+  background: var(--warning-bg);
+  border: 1px solid #FAD7A0;
+  color: var(--warning);
+}
+
+.app-shell .alert-info {
+  background: #EBF4FF;
+  border: 1px solid #90BEF5;
+  color: var(--navy);
+}
+
 /* ── Autocomplete ── */
 .app-shell .autocomplete-container {
   position: relative;
@@ -868,4 +882,375 @@
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.app-shell .confirm-modal-box {
+  max-width: 420px;
+}
+
+.app-shell .confirm-modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-shell .confirm-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.app-shell .confirm-modal-icon-default,
+.app-shell .confirm-modal-icon-warning {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.app-shell .confirm-modal-icon-danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.app-shell .confirm-modal-message {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-body);
+  margin: 0;
+}
+
+/* ConfirmModal se renderiza desde el sidebar (fuera de .app-shell) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 59, 102, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.confirm-modal-box {
+  background: #FFFFFF;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(13, 59, 102, 0.25);
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+  animation: fade-slide-in 0.25s ease-out;
+}
+
+.confirm-modal-box .modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #D1DCE8;
+}
+
+.confirm-modal-box .modal-body {
+  padding: 20px 24px;
+}
+
+.confirm-modal-box .modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #D1DCE8;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirm-modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.confirm-modal-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.confirm-modal-icon-warning {
+  background: #FFF8E7;
+  color: #D4820A;
+}
+
+.confirm-modal-icon-danger {
+  background: #FEF0EE;
+  color: #C0392B;
+}
+
+.confirm-modal-message {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #2C3E50;
+  margin: 0;
+}
+
+.confirm-modal-box .modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0D3B66;
+}
+
+/* ── Calibration ── */
+.app-shell .calibration-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-shell .calibration-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-shell .calibration-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 3px;
+}
+
+.app-shell .calibration-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.app-shell .calibration-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.app-shell .calibration-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.app-shell .calibration-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-shell .calibration-field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.app-shell .calibration-alert-last {
+  margin-bottom: 0;
+}
+
+.app-shell .calibration-form-group-last {
+  margin-bottom: 0;
+}
+
+.app-shell .calibration-font-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.app-shell .calibration-font-select {
+  flex: 1;
+}
+
+.app-shell .calibration-font-preview {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--navy);
+  min-width: 40px;
+  text-align: center;
+}
+
+.app-shell .calibration-range-wrap {
+  margin-top: 14px;
+}
+
+.app-shell .calibration-range {
+  width: 100%;
+  accent-color: var(--navy);
+}
+
+.app-shell .calibration-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.app-shell .calibration-info-text {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.app-shell .calibration-offset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.app-shell .offset-card {
+  background: var(--bg-white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-shell .offset-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-shell .offset-card-number {
+  width: 28px;
+  height: 28px;
+  background: var(--navy);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.app-shell .offset-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.app-shell .offset-card-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.app-shell .offset-card-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.app-shell .offset-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.app-shell .offset-control-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.app-shell .offset-control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-white);
+}
+
+.app-shell .offset-btn {
+  width: 36px;
+  height: 38px;
+  border: none;
+  background: var(--bg-surface);
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--t-fast), color var(--t-fast);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.app-shell .offset-btn:hover {
+  background: var(--navy);
+  color: #FFFFFF;
+}
+
+.app-shell .offset-value {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  outline: none;
+  min-width: 0;
+}
+
+.app-shell .calibration-summary {
+  margin-top: 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+
+.app-shell .calibration-summary-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.app-shell .calibration-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.app-shell .calibration-summary-item {
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.app-shell .calibration-summary-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+
+.app-shell .calibration-summary-values {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.app-shell .calibration-summary-values.active {
+  color: var(--sky-hover);
 }

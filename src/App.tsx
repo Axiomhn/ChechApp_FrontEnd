@@ -3,7 +3,7 @@ import DesignSystemPage from "@/pages/DesignSystem"
 import LoginPage from "@/pages/Login"
 import EmissionPage from "@/pages/Emission"
 import ProvidersPage from "@/pages/Providers"
-import ComingSoon from "@/pages/ComingSoon"
+import CalibrationPage from "@/pages/Calibration"
 import AuthGuard from "@/components/auth/AuthGuard"
 import MainLayout from "@/components/layout/MainLayout"
 
@@ -20,10 +20,7 @@ function App() {
           <Route path="/" element={<Navigate to="/emission" replace />} />
           <Route path="/emission" element={<EmissionPage />} />
           <Route path="/providers" element={<ProvidersPage />} />
-          <Route
-            path="/calibration"
-            element={<ComingSoon moduleName="Ajustes de Cheque" />}
-          />
+          <Route path="/calibration" element={<CalibrationPage />} />
         </Route>
       </Route>
 
