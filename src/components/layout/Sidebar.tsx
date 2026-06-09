@@ -1,9 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import { useDispatch, useSelector } from "react-redux"
-import { Landmark, Users, Sliders, LogOut } from "lucide-react"
+import { Landmark, Users, Sliders, LogOut, Droplets } from "lucide-react"
 import type { RootState } from "@/store"
 import { logout } from "@/store/slices/authSlice"
-import logo from "@/assets/logo.svg"
 
 const navItems = [
   { to: "/emission", icon: Landmark, label: "Emisión de Egresos" },
@@ -32,11 +31,11 @@ const Sidebar = () => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icon">
-              <img src={logo} alt="" className="h-6 w-6 object-contain" />
+              <Droplets size={20} color="#fff" />
             </div>
             <div className="sidebar-brand-text">
-              <span className="sidebar-brand-title">Chech App</span>
-              <span className="sidebar-brand-sub">Axiom Tech</span>
+              <span className="sidebar-brand-title">UMASENY</span>
+              <span className="sidebar-brand-sub">El Negrito, Yoro</span>
             </div>
           </div>
         </div>
@@ -61,7 +60,7 @@ const Sidebar = () => {
       <div className="sidebar-footer">
         <div className="sidebar-user">
           <div className="sidebar-user-name">{displayName}</div>
-          <div className="sidebar-user-role">Operador · Chech App</div>
+          <div className="sidebar-user-role">Operador · UMASENY</div>
         </div>
         <button
           type="button"

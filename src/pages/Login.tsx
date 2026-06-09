@@ -3,10 +3,9 @@ import { useNavigate } from "react-router-dom"
 import { useForm, type Resolver } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
-import { User, Lock, AlertCircle, Shield, Loader2 } from "lucide-react"
+import { User, Lock, AlertCircle, Shield, Loader2, Droplets } from "lucide-react"
 import { useLoginMutation } from "@/api/auth"
 import { MOCK_AUTH_ENABLED, MOCK_CREDENTIALS } from "@/lib/mock-auth"
-import logo from "@/assets/logo.svg"
 import { cn } from "@/lib/utils"
 
 const schema = yup.object({
@@ -76,23 +75,19 @@ export default function LoginPage() {
           }}
         />
 
-        <div className="relative z-10 mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/20 bg-white/10 p-3">
-          <img
-            src={logo}
-            alt="Logo Chech App"
-            className="h-full w-full object-contain"
-          />
+        <div className="relative z-10 mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
+          <Droplets size={38} color="#FFFFFF" />
         </div>
 
         <h1 className="relative z-10 text-center text-[28px] font-extrabold tracking-tight text-white">
-          Chech App
+          UMASENY
         </h1>
         <p className="relative z-10 mt-2 text-center text-xs leading-relaxed text-white/60">
-          Sistema de Gestión de Cheques
+          Unidad Desconcentrada Municipal
           <br />
-          y Órdenes de Pago
+          de Agua y Saneamiento
           <br />
-          Axiom Tech · Honduras
+          El Negrito, Yoro · Honduras
         </p>
 
         <div className="relative z-10 my-5 h-0.5 w-10 rounded-sm bg-[#4A90E2]" />
@@ -103,9 +98,9 @@ export default function LoginPage() {
               size={12}
               className="mr-1 inline-block align-middle"
             />
-            Acceso seguro — autenticación institucional
+            Sistema monousuario — acceso estrictamente local
             <br />
-            Conexión al servidor corporativo
+            Sin conexión a internet requerida
           </p>
         </div>
       </div>

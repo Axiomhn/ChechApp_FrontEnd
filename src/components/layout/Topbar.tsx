@@ -9,10 +9,10 @@ const Topbar = () => {
     <div className="topbar">
       <div>
         <div className="topbar-title">{meta.title}</div>
-        <div className="topbar-breadcrumb">Chech App · {meta.sub}</div>
+        <div className="topbar-breadcrumb">UMASENY · {meta.sub}</div>
       </div>
       <span className="topbar-badge">
-        {new Date().toLocaleDateString("es-HN")}
+        Sistema Offline · {new Date().toLocaleDateString("es-HN")}
       </span>
     </div>
   )

@@ -19,6 +19,6 @@ export const MODULE_META: Record<string, ModuleMeta> = {
 }
 
 export const DEFAULT_MODULE_META: ModuleMeta = {
-  title: "Chech App",
+  title: "UMASENY",
   sub: "Sistema de gestión de cheques",
 }
