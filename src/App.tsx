@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import DesignSystemPage from "@/pages/DesignSystem"
 import LoginPage from "@/pages/Login"
 import EmissionPage from "@/pages/Emission"
+import ProvidersPage from "@/pages/Providers"
 import ComingSoon from "@/pages/ComingSoon"
 import AuthGuard from "@/components/auth/AuthGuard"
 import MainLayout from "@/components/layout/MainLayout"
@@ -18,10 +19,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/" element={<Navigate to="/emission" replace />} />
           <Route path="/emission" element={<EmissionPage />} />
-          <Route
-            path="/providers"
-            element={<ComingSoon moduleName="Catálogo de Proveedores" />}
-          />
+          <Route path="/providers" element={<ProvidersPage />} />
           <Route
             path="/calibration"
             element={<ComingSoon moduleName="Ajustes de Cheque" />}

@@ -22,6 +22,7 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --shadow-card: 0 2px 12px rgba(13, 59, 102, 0.08);
+  --shadow-modal: 0 20px 60px rgba(13, 59, 102, 0.25);
   --font: 'Geist Variable', 'Segoe UI', Arial, sans-serif;
   --font-mono: 'Courier New', Courier, monospace;
   --t-fast: 0.15s ease;
@@ -440,6 +441,16 @@
   color: var(--text-dark);
 }
 
+.app-shell .btn-danger {
+  background: var(--danger);
+  color: #FFFFFF;
+}
+
+.app-shell .btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
 .app-shell .btn-sm {
   padding: 7px 14px;
   font-size: 13px;
@@ -603,4 +614,258 @@
 
 .app-shell .animated-fade-in {
   animation: fade-slide-in 0.3s ease-out;
+}
+
+/* ── Providers ── */
+.app-shell .providers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-shell .providers-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-shell .providers-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 3px;
+}
+
+.app-shell .providers-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.app-shell .providers-search-card {
+  padding: 0;
+}
+
+.app-shell .providers-search-bar {
+  padding: 16px 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.app-shell .providers-search-input {
+  flex: 1;
+}
+
+.app-shell .badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.app-shell .badge-navy {
+  background: rgba(13, 59, 102, 0.1);
+  color: var(--navy);
+}
+
+.app-shell .badge-sky {
+  background: rgba(74, 144, 226, 0.12);
+  color: var(--sky-hover);
+}
+
+.app-shell .table-container {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-table);
+  overflow: hidden;
+  background: var(--bg-white);
+}
+
+.app-shell table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.app-shell thead tr {
+  background: var(--navy);
+}
+
+.app-shell th {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: left;
+  border: none;
+}
+
+.app-shell td {
+  padding: 13px 16px;
+  font-size: 13.5px;
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border-table);
+}
+
+.app-shell tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.app-shell tbody tr:hover td {
+  background: #F0F6FF;
+}
+
+.app-shell .providers-name-cell {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.app-shell .providers-empty-cell {
+  font-style: italic;
+}
+
+.app-shell .providers-actions-cell {
+  text-align: right;
+}
+
+.app-shell .providers-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.app-shell .providers-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 7px;
+  border-radius: 5px;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-shell .providers-icon-btn-edit {
+  color: var(--sky);
+}
+
+.app-shell .providers-icon-btn-edit:hover {
+  background: #EBF4FF;
+}
+
+.app-shell .providers-icon-btn-delete {
+  color: var(--danger);
+}
+
+.app-shell .providers-icon-btn-delete:hover {
+  background: var(--danger-bg);
+}
+
+.app-shell .providers-delete-confirm {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.app-shell .providers-delete-confirm .btn-sm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.app-shell .providers-empty-row {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-muted);
+}
+
+.app-shell .providers-empty-icon {
+  opacity: 0.3;
+  margin: 0 auto 8px;
+  display: block;
+}
+
+.app-shell .providers-required {
+  color: var(--danger);
+}
+
+.app-shell .providers-field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.app-shell .text-muted {
+  color: var(--text-muted);
+}
+
+.app-shell .font-mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ── Modal ── */
+.app-shell .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 59, 102, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.app-shell .modal-box {
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-modal);
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  animation: fade-slide-in 0.25s ease-out;
+}
+
+.app-shell .modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-shell .modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.app-shell .modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all var(--t-fast);
+}
+
+.app-shell .modal-close:hover {
+  background: var(--bg-surface);
+  color: var(--text-dark);
+}
+
+.app-shell .modal-body {
+  padding: 24px;
+}
+
+.app-shell .modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
 }

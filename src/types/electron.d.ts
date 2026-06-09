@@ -45,9 +45,18 @@ interface ApiResult<T = unknown> {
   user?: { nombre_completo?: string; name?: string }
 }
 
+type ProviderInput = {
+  id: number | null
+  nombre_razon: string
+  rtn?: string
+  telefono?: string
+}
+
 export interface ChechAppApi {
   db: {
     getProviders: () => Promise<ApiResult<Provider[]>>
+    saveProvider: (provider: ProviderInput) => Promise<ApiResult>
+    deleteProvider: (id: number) => Promise<ApiResult>
   }
   config: {
     getSettings: () => Promise<ApiResult<AppSettings>>
