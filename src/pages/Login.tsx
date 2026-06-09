@@ -1,169 +1,225 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useForm } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { User, Lock, Eye, EyeOff, Loader2 } from "lucide-react"
+import { User, Lock, AlertCircle, Shield, Loader2, Droplets } from "lucide-react"
 import { useLoginMutation } from "@/api/auth"
-import logo from "@/assets/logo.svg"
+import { MOCK_AUTH_ENABLED, MOCK_CREDENTIALS } from "@/lib/mock-auth"
+import { cn } from "@/lib/utils"
 
 const schema = yup.object({
-  email: yup.string().email("Email inválido").required("Campo requerido o incorrecto*"),
-  password: yup.string().required("Campo requerido o incorrecto*"),
-}).required();
+  email: yup.string().trim().required("Por favor complete todos los campos."),
+  password: yup.string().required("Por favor complete todos los campos."),
+}).required()
 
 interface IFormInput {
-  email: string;
-  password: string;
+  email: string
+  password: string
 }
 
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [showPassword, setShowPassword] = useState(false)
+  const [serverError, setServerError] = useState("")
 
-  const { register, handleSubmit, formState: { errors } } = useForm<IFormInput>({
-    resolver: yupResolver(schema) as any
-  });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<IFormInput>({
+    resolver: yupResolver(schema) as Resolver<IFormInput>,
+  })
 
   const loginMutation = useLoginMutation()
 
+  const validationError =
+    errors.email?.message || errors.password?.message || ""
+  const displayError = serverError || validationError
+
   const onSubmit = (data: IFormInput) => {
+    setServerError("")
     loginMutation.mutate(
       { email: data.email, password: data.password },
       {
-        onSuccess: () => navigate("/"),
-        onError: () => {},
+        onSuccess: () => navigate("/emission"),
+        onError: (err) => {
+          const status = (err as { response?: { status?: number } })?.response?.status
+          setServerError(
+            status === 401
+              ? "Usuario o contraseña incorrectos."
+              : "Error de comunicación con el servidor."
+          )
+        },
       }
     )
   }
 
+  const isLoading = loginMutation.isPending
+
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-blue-50 p-4">
-      <Card className="w-full max-w-lg border-none shadow-2xl rounded-2xl overflow-hidden bg-white">
-        <CardContent className="p-8 md:p-14 pt-8 flex flex-col gap-7">
-          <div className="relative w-full flex flex-col items-center mb-4">
-            <div className="flex h-24 w-24 md:h-32 md:w-32 items-center justify-center p-2 mb-2">
-              <img
-                src={logo}
-                alt="Logo Chech App"
-                className="w-full h-full object-contain"
-              />
-            </div>
+    <div className="flex h-screen bg-white">
+      {/* Panel izquierdo — identidad institucional */}
+      <div className="relative flex w-[420px] min-w-[420px] flex-col items-center justify-center overflow-hidden bg-[#0D3B66] px-10 py-12">
+        <div
+          className="pointer-events-none absolute -left-[100px] -top-[100px] h-[400px] w-[400px] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(74,144,226,0.3) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute -bottom-20 -right-20 h-[300px] w-[300px] rounded-full"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(0,168,232,0.2) 0%, transparent 70%)",
+          }}
+        />
 
-            <div className="mt-4 flex flex-col items-center text-center">
-              <h1 className="text-3xl font-normal leading-10 text-black font-['Segoe_UI_Symbol']">
-                Chech App
-              </h1>
-              <p className="mt-1 text-xl md:text-2xl font-normal leading-8 text-gray-500 font-['Segoe_UI_Symbol']">
-                Sistema de Gestión de Cheques
-              </p>
-            </div>
-          </div>
+        <div className="relative z-10 mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
+          <Droplets size={38} color="#FFFFFF" />
+        </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-7" noValidate>
-            <div className="flex w-full flex-col items-start justify-start gap-1">
-              <Label
+        <h1 className="relative z-10 text-center text-[28px] font-extrabold tracking-tight text-white">
+          UMASENY
+        </h1>
+        <p className="relative z-10 mt-2 text-center text-xs leading-relaxed text-white/60">
+          Unidad Desconcentrada Municipal
+          <br />
+          de Agua y Saneamiento
+          <br />
+          El Negrito, Yoro · Honduras
+        </p>
+
+        <div className="relative z-10 my-5 h-0.5 w-10 rounded-sm bg-[#4A90E2]" />
+
+        <div className="relative z-10 text-center">
+          <p className="text-[11px] leading-relaxed text-white/40">
+            <Shield
+              size={12}
+              className="mr-1 inline-block align-middle"
+            />
+            Sistema monousuario — acceso estrictamente local
+            <br />
+            Sin conexión a internet requerida
+          </p>
+        </div>
+      </div>
+
+      {/* Panel derecho — formulario */}
+      <div className="flex flex-1 items-center justify-center p-10">
+        <div className="animate-fade-slide-in w-full max-w-[380px]">
+          <h2 className="mb-1.5 text-2xl font-bold text-[#0D3B66]">
+            Iniciar Sesión
+          </h2>
+          <p className="mb-8 text-[13px] text-[#6B7C93]">
+            Sistema de Emisión de Cheques y Órdenes de Pago
+          </p>
+
+          {displayError && (
+            <div
+              className="mb-4 flex animate-fade-slide-in items-start gap-2.5 rounded-lg border border-[#F5B7B1] bg-[#FEF0EE] px-4 py-3 text-[13px] leading-snug text-[#C0392B]"
+              role="alert"
+            >
+              <AlertCircle size={16} className="mt-0.5 shrink-0" />
+              <span>{displayError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            <div className="mb-[18px] flex flex-col gap-1.5">
+              <label
                 htmlFor="email"
-                className="text-2xl font-normal leading-8 text-black font-['Segoe_UI_Symbol']"
+                className="text-[13px] font-semibold tracking-wide text-[#2C3E50]"
               >
                 Usuario
-              </Label>
-
-              <div className={`flex w-full items-center justify-start gap-2.5 rounded-md bg-white px-4 py-2.5 shadow-[4px_4px_4px_rgba(0,0,0,0.20)] transition-all ${errors.email ? 'outline-[1px] outline-red-600 outline-solid' : ''}`}>
-                <User className="h-6 w-6 text-gray-500" />
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center text-[#6B7C93]">
+                  <User size={16} />
+                </span>
                 <input
                   id="email"
                   type="text"
+                  autoFocus
+                  autoComplete="username"
+                  disabled={isLoading}
+                  placeholder="Ingrese su usuario"
+                  className={cn(
+                    "w-full rounded-lg border-[1.5px] border-[#D1DCE8] bg-white py-2.5 pl-[38px] pr-3.5 text-sm text-[#1A1A1A] outline-none transition-[border-color,box-shadow] duration-150",
+                    "placeholder:text-[#6B7C93]",
+                    "focus:border-[#4A90E2] focus:shadow-[0_0_0_3px_rgba(74,144,226,0.15)]",
+                    "disabled:cursor-not-allowed disabled:bg-[#F5F8FC] disabled:text-[#6B7C93]"
+                  )}
                   {...register("email")}
-                  placeholder="Usuario"
-                  autoComplete="off"
-                  className="w-full border-none bg-transparent text-xl md:text-2xl font-normal leading-8 text-black outline-none placeholder:text-gray-500 font-['Segoe_UI_Symbol']"
                 />
               </div>
-
-              {errors.email && (
-                <div className="flex h-8 w-full flex-col justify-center text-base font-normal leading-8 text-red-600 font-['Segoe_UI_Symbol']">
-                  {errors.email.message}
-                </div>
-              )}
             </div>
 
-            <div className="flex w-full flex-col items-start justify-start gap-1">
-              <Label
+            <div className="mb-7 flex flex-col gap-1.5">
+              <label
                 htmlFor="password"
-                className="text-2xl font-normal leading-8 text-black font-['Segoe_UI_Symbol']"
+                className="text-[13px] font-semibold tracking-wide text-[#2C3E50]"
               >
                 Contraseña
-              </Label>
-
-              <div className={`flex w-full items-center justify-start gap-2.5 rounded-md bg-white px-4 py-2.5 shadow-[4px_4px_4px_rgba(0,0,0,0.20)] transition-all ${errors.password ? 'outline-[1px] outline-red-600 outline-solid' : ''}`}>
-                <Lock className="h-6 w-6 text-gray-500" />
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 flex -translate-y-1/2 items-center text-[#6B7C93]">
+                  <Lock size={16} />
+                </span>
                 <input
                   id="password"
-                  type={showPassword ? "text" : "password"}
+                  type="password"
+                  autoComplete="current-password"
+                  disabled={isLoading}
+                  placeholder="Ingrese su contraseña"
+                  className={cn(
+                    "w-full rounded-lg border-[1.5px] border-[#D1DCE8] bg-white py-2.5 pl-[38px] pr-3.5 text-sm text-[#1A1A1A] outline-none transition-[border-color,box-shadow] duration-150",
+                    "placeholder:text-[#6B7C93]",
+                    "focus:border-[#4A90E2] focus:shadow-[0_0_0_3px_rgba(74,144,226,0.15)]",
+                    "disabled:cursor-not-allowed disabled:bg-[#F5F8FC] disabled:text-[#6B7C93]"
+                  )}
                   {...register("password")}
-                  placeholder="Contraseña"
-                  className="w-full border-none bg-transparent text-xl md:text-2xl font-normal leading-8 text-black outline-none placeholder:text-gray-500 font-['Segoe_UI_Symbol']"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="h-6 w-6" /> : <Eye className="h-6 w-6" />}
-                </button>
               </div>
-
-              {errors.password && (
-                <div className="flex h-8 w-full flex-col justify-center text-base font-normal leading-8 text-red-600 font-['Segoe_UI_Symbol']">
-                  {errors.password.message}
-                </div>
-              )}
             </div>
 
-            {loginMutation.isError && (
-              <div className="flex w-full flex-col items-start justify-start gap-2.5 rounded-md bg-blue-50 py-4 pl-6 pr-10 shadow-sm outline-[0.5px] outline-red-600 outline-solid">
-                <div className="flex justify-start items-center gap-2.5">
-                  <div className="relative h-6 w-6 overflow-hidden flex items-center justify-center">
-                    <div className="h-5 w-5 bg-red-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-[10px] font-bold">!</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col justify-center text-xs font-normal leading-4 text-red-600 font-['Segoe_UI_Symbol'] break-words">
-                    {(loginMutation.error as any)?.response?.status === 401
-                      ? "Usuario o contraseña inválida"
-                      : "Error interno del servidor"}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <Button
+            <button
               type="submit"
-              disabled={loginMutation.isPending}
-              className="h-14 w-full bg-primary text-white text-2xl font-normal rounded-md hover:bg-primary/90 transition-all font-['Segoe_UI_Symbol'] mt-2 cursor-pointer"
+              disabled={isLoading}
+              className={cn(
+                "flex w-full items-center justify-center gap-1.5 rounded-lg border-none px-7 py-[13px] text-[15px] font-semibold tracking-wide text-white transition-all duration-150",
+                "bg-[#0D3B66] shadow-[0_2px_8px_rgba(13,59,102,0.25)]",
+                "hover:bg-[#1A5A96] hover:shadow-[0_4px_14px_rgba(13,59,102,0.35)] hover:-translate-y-px",
+                "active:translate-y-0 active:shadow-[0_2px_6px_rgba(13,59,102,0.2)]",
+                "disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none disabled:translate-y-0"
+              )}
             >
-              {loginMutation.isPending ? (
+              {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-6 w-6 animate-spin" />
-                  Ingresando...
+                  <Loader2 size={16} className="animate-spin" />
+                  Verificando...
                 </>
               ) : (
-                "Ingresar al sistema"
+                "Entrar al Sistema"
               )}
-            </Button>
+            </button>
           </form>
 
-          <div className="w-full text-center mt-2">
-            <p className="text-xs leading-8 text-gray-500 font-['Segoe_UI_Symbol']">
-              © 2026 Axiom Tech Honduras
+          <p className="mt-6 text-center text-[11px] text-[#6B7C93]">
+            Acceso administrativo · Sin opción de recuperación de contraseña
+          </p>
+
+          {MOCK_AUTH_ENABLED && (
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-[#4A90E2]">
+              Modo desarrollo (sin backend)
+              <br />
+              Usuario: <strong>{MOCK_CREDENTIALS.email}</strong>
+              {" · "}
+              Contraseña: <strong>{MOCK_CREDENTIALS.password}</strong>
             </p>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
