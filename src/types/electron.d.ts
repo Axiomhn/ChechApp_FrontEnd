@@ -1,7 +1,7 @@
 import type { CalibrationSettings, PrinterInfo } from "./calibration"
 
 export interface Provider {
-  id: number
+  id: string
   nombre_razon: string
   rtn: string | null
   telefono: string | null
@@ -48,7 +48,7 @@ interface ApiResult<T = unknown> {
 }
 
 type ProviderInput = {
-  id: number | null
+  id: string | null
   nombre_razon: string
   rtn?: string
   telefono?: string
@@ -58,7 +58,7 @@ export interface ChechAppApi {
   db: {
     getProviders: () => Promise<ApiResult<Provider[]>>
     saveProvider: (provider: ProviderInput) => Promise<ApiResult>
-    deleteProvider: (id: number) => Promise<ApiResult>
+    deleteProvider: (id: string) => Promise<ApiResult>
   }
   config: {
     getSettings: () => Promise<ApiResult<AppSettings>>
