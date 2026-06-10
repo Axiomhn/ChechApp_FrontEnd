@@ -1,5 +1,9 @@
-import type { AppSettings, ChechAppApi, Provider } from "@/types/electron"
+import type { ChechAppApi, Provider } from "@/types/electron"
 import type { CalibrationSettings, PrinterInfo } from "@/types/calibration"
+import {
+  loadBrowserCalibration,
+  saveBrowserCalibration,
+} from "@/lib/calibration-storage"
 
 const INITIAL_PROVIDERS: Provider[] = [
   { id: "mock-1", nombre_razon: "Ferretería El Progreso", rtn: "08011990123456", telefono: "2678-1234" },
@@ -10,40 +14,10 @@ const INITIAL_PROVIDERS: Provider[] = [
 let mockProviders: Provider[] = [...INITIAL_PROVIDERS]
 let nextProviderId = 4
 
-let mockSettings: AppSettings = {
-  printer_name: "Microsoft Print to PDF",
-  print_method: "graphical",
-  offset_cheque_fecha_x: "0",
-  offset_cheque_fecha_y: "0",
-  offset_cheque_monto_x: "0",
-  offset_cheque_monto_y: "0",
-  offset_cheque_beneficiario_x: "0",
-  offset_cheque_beneficiario_y: "0",
-  offset_cheque_letras_x: "0",
-  offset_cheque_letras_y: "0",
-  fuente_tamano: "12",
-}
-
 const MOCK_PRINTERS: PrinterInfo[] = [
   { name: "Microsoft Print to PDF", isDefault: true },
   { name: "EPSON LX-350", isDefault: false },
 ]
-
-function settingsToAppSettings(settings: CalibrationSettings): AppSettings {
-  return {
-    printer_name: settings.printer_name,
-    print_method: settings.print_method,
-    offset_cheque_fecha_x: String(settings.offset_cheque_fecha_x),
-    offset_cheque_fecha_y: String(settings.offset_cheque_fecha_y),
-    offset_cheque_monto_x: String(settings.offset_cheque_monto_x),
-    offset_cheque_monto_y: String(settings.offset_cheque_monto_y),
-    offset_cheque_beneficiario_x: String(settings.offset_cheque_beneficiario_x),
-    offset_cheque_beneficiario_y: String(settings.offset_cheque_beneficiario_y),
-    offset_cheque_letras_x: String(settings.offset_cheque_letras_x),
-    offset_cheque_letras_y: String(settings.offset_cheque_letras_y),
-    fuente_tamano: String(settings.fuente_tamano),
-  }
-}
 
 type ProviderInput = {
   id: string | null
@@ -97,10 +71,13 @@ const browserApi: ChechAppApi = {
     },
   },
   config: {
-    getSettings: async () => ({ success: true, data: { ...mockSettings } }),
+    getSettings: async () => ({
+      success: true,
+      data: loadBrowserCalibration(),
+    }),
     saveSettings: async (settings: CalibrationSettings) => {
-      mockSettings = settingsToAppSettings(settings)
-      return { success: true }
+      const data = saveBrowserCalibration(settings)
+      return { success: true, data }
     },
     getPrinters: async () => MOCK_PRINTERS,
   },
@@ -116,6 +93,19 @@ const browserApi: ChechAppApi = {
   },
 }
 
+let electronMergedApi: ChechAppApi | null = null
+
 export function getAppApi(): ChechAppApi {
-  return window.api ?? browserApi
+  const electronApi = window.api
+  if (!electronApi) return browserApi
+
+  if (!electronMergedApi) {
+    electronMergedApi = {
+      ...browserApi,
+      config: electronApi.config,
+      print: electronApi.print ?? browserApi.print,
+    }
+  }
+
+  return electronMergedApi
 }

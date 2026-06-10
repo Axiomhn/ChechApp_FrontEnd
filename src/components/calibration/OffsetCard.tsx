@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from "react"
 import type { CalibrationSettings } from "@/types/calibration"
 
 type OffsetKey = keyof Pick<
@@ -56,7 +57,7 @@ interface OffsetCardProps {
   xKey: OffsetKey
   yKey: OffsetKey
   settings: CalibrationSettings
-  onChange: (settings: CalibrationSettings) => void
+  onChange: Dispatch<SetStateAction<CalibrationSettings>>
 }
 
 export default function OffsetCard({
@@ -82,12 +83,12 @@ export default function OffsetCard({
         <OffsetControl
           label="Eje X (←→)"
           value={settings[xKey]}
-          onChange={(v) => onChange({ ...settings, [xKey]: v })}
+          onChange={(v) => onChange((prev) => ({ ...prev, [xKey]: v }))}
         />
         <OffsetControl
           label="Eje Y (↑↓)"
           value={settings[yKey]}
-          onChange={(v) => onChange({ ...settings, [yKey]: v })}
+          onChange={(v) => onChange((prev) => ({ ...prev, [yKey]: v }))}
         />
       </div>
     </div>

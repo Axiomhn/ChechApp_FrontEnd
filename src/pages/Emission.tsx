@@ -39,10 +39,9 @@ export default function EmissionPage() {
   const [printingType, setPrintingType] = useState("")
 
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const api = getAppApi()
-
   const loadData = async () => {
     try {
+      const api = getAppApi()
       const provRes = await api.db.getProviders()
       if (provRes.success && provRes.data) setProviders(provRes.data)
 
@@ -55,6 +54,7 @@ export default function EmissionPage() {
 
   useEffect(() => {
     let active = true
+    const api = getAppApi()
 
     Promise.all([api.db.getProviders(), api.config.getSettings()])
       .then(([provRes, setRes]) => {
@@ -67,7 +67,7 @@ export default function EmissionPage() {
     return () => {
       active = false
     }
-  }, [api])
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

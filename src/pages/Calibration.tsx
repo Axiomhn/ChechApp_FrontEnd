@@ -43,6 +43,20 @@ const OFFSET_SUMMARY = [
   { label: "Monto", xKey: "offset_cheque_monto_x", yKey: "offset_cheque_monto_y" },
 ] as const
 
+function withResetOffsets(settings: CalibrationSettings): CalibrationSettings {
+  return {
+    ...settings,
+    offset_cheque_fecha_x: 0,
+    offset_cheque_fecha_y: 0,
+    offset_cheque_monto_x: 0,
+    offset_cheque_monto_y: 0,
+    offset_cheque_beneficiario_x: 0,
+    offset_cheque_beneficiario_y: 0,
+    offset_cheque_letras_x: 0,
+    offset_cheque_letras_y: 0,
+  }
+}
+
 export default function CalibrationPage() {
   const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [loading, setLoading] = useState(false)
@@ -52,10 +66,9 @@ export default function CalibrationPage() {
   )
   const [showResetModal, setShowResetModal] = useState(false)
 
-  const api = getAppApi()
-
   useEffect(() => {
     let active = true
+    const api = getAppApi()
 
     Promise.all([api.config.getPrinters(), api.config.getSettings()])
       .then(([printerList, res]) => {
@@ -70,41 +83,47 @@ export default function CalibrationPage() {
     return () => {
       active = false
     }
-  }, [api])
+  }, [])
 
-  const handleSave = async () => {
+  const persistSettings = async (
+    nextSettings: CalibrationSettings,
+    successMessage: string
+  ) => {
     setLoading(true)
     setSuccessMsg("")
     try {
-      const res = await api.config.saveSettings(settings)
+      const res = await getAppApi().config.saveSettings(nextSettings)
       if (res.success) {
-        setSuccessMsg(
-          "Configuración guardada correctamente en la base de datos local."
-        )
+        const saved = res.data ? mapApiSettings(res.data) : nextSettings
+        setSettings(saved)
+        setSuccessMsg(successMessage)
         setTimeout(() => setSuccessMsg(""), 4000)
-      } else {
-        alert("Error al guardar configuración: " + res.error)
+        return true
       }
+      alert("Error al guardar configuración: " + res.error)
+      return false
     } catch (err) {
       console.error(err)
+      return false
     } finally {
       setLoading(false)
     }
   }
 
-  const handleConfirmReset = () => {
-    setSettings((prev) => ({
-      ...prev,
-      offset_cheque_fecha_x: 0,
-      offset_cheque_fecha_y: 0,
-      offset_cheque_monto_x: 0,
-      offset_cheque_monto_y: 0,
-      offset_cheque_beneficiario_x: 0,
-      offset_cheque_beneficiario_y: 0,
-      offset_cheque_letras_x: 0,
-      offset_cheque_letras_y: 0,
-    }))
+  const handleSave = async () => {
+    await persistSettings(
+      settings,
+      "Configuración guardada localmente en este equipo."
+    )
+  }
+
+  const handleConfirmReset = async () => {
     setShowResetModal(false)
+    const resetSettings = withResetOffsets(settings)
+    await persistSettings(
+      resetSettings,
+      "Offsets restablecidos y guardados en este equipo."
+    )
   }
 
   return (
