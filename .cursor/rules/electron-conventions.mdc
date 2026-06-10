@@ -14,16 +14,22 @@ alwaysApply: false
 - **Producción**: carga `dist/index.html`
 - Icono: `public/icon.png` (dev) / `dist/icon.png` (packaged)
 
-## webPreferences (igual que generador-de-solvencias)
+## webPreferences
 
 ```js
 webPreferences: {
-  nodeIntegration: true,
-  contextIsolation: false,
+  preload: path.join(__dirname, 'preload.js'),
+  contextIsolation: true,
+  nodeIntegration: false,
 }
 ```
 
-No cambiar sin acordar migración a `preload` + `contextBridge`.
+## Calibración offline (persistencia local)
+
+- Archivo: `{userData}/calibration-settings.json` (ver `electron/calibration-store.js`)
+- IPC: `calibration:get-settings`, `calibration:save-settings`, `calibration:get-printers`
+- Expuesto al renderer vía `preload.js` → `window.api.config`
+- No usar API backend para offsets de cheque; la impresión lee esta config local
 
 ## Empaquetado (`package.json` → `build`)
 
