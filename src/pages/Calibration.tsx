@@ -11,11 +11,28 @@ import {
 import { getAppApi } from "@/lib/app-api"
 import OffsetCard from "@/components/calibration/OffsetCard"
 import ConfirmModal from "@/components/ui/ConfirmModal"
+import type { AppSettings } from "@/types/electron"
 import {
   defaultCalibrationSettings,
   type CalibrationSettings,
   type PrinterInfo,
 } from "@/types/calibration"
+
+function mapApiSettings(data: AppSettings): CalibrationSettings {
+  return {
+    printer_name: data.printer_name || "",
+    print_method: data.print_method || "graphical",
+    offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
+    offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
+    offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
+    offset_cheque_monto_y: parseInt(data.offset_cheque_monto_y ?? "0"),
+    offset_cheque_beneficiario_x: parseInt(data.offset_cheque_beneficiario_x ?? "0"),
+    offset_cheque_beneficiario_y: parseInt(data.offset_cheque_beneficiario_y ?? "0"),
+    offset_cheque_letras_x: parseInt(data.offset_cheque_letras_x ?? "0"),
+    offset_cheque_letras_y: parseInt(data.offset_cheque_letras_y ?? "0"),
+    fuente_tamano: parseInt(data.fuente_tamano ?? "12"),
+  }
+}
 
 const FONT_SIZE_OPTIONS = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20]
 
@@ -37,43 +54,23 @@ export default function CalibrationPage() {
 
   const api = getAppApi()
 
-  const loadConfigs = async () => {
-    try {
-      setLoading(true)
-      const printerList = await api.config.getPrinters()
-      setPrinters(printerList || [])
-
-      const res = await api.config.getSettings()
-      if (res.success && res.data) {
-        const data = res.data
-        setSettings({
-          printer_name: data.printer_name || "",
-          print_method: data.print_method || "graphical",
-          offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
-          offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
-          offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
-          offset_cheque_monto_y: parseInt(data.offset_cheque_monto_y ?? "0"),
-          offset_cheque_beneficiario_x: parseInt(
-            data.offset_cheque_beneficiario_x ?? "0"
-          ),
-          offset_cheque_beneficiario_y: parseInt(
-            data.offset_cheque_beneficiario_y ?? "0"
-          ),
-          offset_cheque_letras_x: parseInt(data.offset_cheque_letras_x ?? "0"),
-          offset_cheque_letras_y: parseInt(data.offset_cheque_letras_y ?? "0"),
-          fuente_tamano: parseInt(data.fuente_tamano ?? "12"),
-        })
-      }
-    } catch (err) {
-      console.error("Error cargando calibraciones:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    loadConfigs()
-  }, [])
+    let active = true
+
+    Promise.all([api.config.getPrinters(), api.config.getSettings()])
+      .then(([printerList, res]) => {
+        if (!active) return
+        setPrinters(printerList || [])
+        if (res.success && res.data) {
+          setSettings(mapApiSettings(res.data))
+        }
+      })
+      .catch((err) => console.error("Error cargando calibraciones:", err))
+
+    return () => {
+      active = false
+    }
+  }, [api])
 
   const handleSave = async () => {
     setLoading(true)

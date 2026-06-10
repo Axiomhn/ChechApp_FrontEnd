@@ -29,7 +29,7 @@ export default function EmissionPage() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [searchProvider, setSearchProvider] = useState("")
-  const [fecha, setFecha] = useState("")
+  const [fecha, setFecha] = useState(generateDefaultDate)
   const [monto, setMonto] = useState("")
   const [montoLetras, setMontoLetras] = useState("")
   const [settings, setSettings] = useState<AppSettings | null>(null)
@@ -54,9 +54,22 @@ export default function EmissionPage() {
   }
 
   useEffect(() => {
-    setFecha(generateDefaultDate())
-    loadData()
+    let active = true
 
+    Promise.all([api.db.getProviders(), api.config.getSettings()])
+      .then(([provRes, setRes]) => {
+        if (!active) return
+        if (provRes.success && provRes.data) setProviders(provRes.data)
+        if (setRes.success && setRes.data) setSettings(setRes.data)
+      })
+      .catch((err) => console.error(err))
+
+    return () => {
+      active = false
+    }
+  }, [api])
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         dropdownRef.current &&

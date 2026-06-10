@@ -5,7 +5,6 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
 import { User, Lock, AlertCircle, Shield, Loader2, Droplets } from "lucide-react"
 import { useLoginMutation } from "@/api/auth"
-import { MOCK_AUTH_ENABLED, MOCK_CREDENTIALS } from "@/lib/mock-auth"
 import { cn } from "@/lib/utils"
 
 const schema = yup.object({
@@ -208,16 +207,6 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-[11px] text-[#6B7C93]">
             Acceso administrativo · Sin opción de recuperación de contraseña
           </p>
-
-          {MOCK_AUTH_ENABLED && (
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-[#4A90E2]">
-              Modo desarrollo (sin backend)
-              <br />
-              Usuario: <strong>{MOCK_CREDENTIALS.email}</strong>
-              {" · "}
-              Contraseña: <strong>{MOCK_CREDENTIALS.password}</strong>
-            </p>
-          )}
         </div>
       </div>
     </div>
