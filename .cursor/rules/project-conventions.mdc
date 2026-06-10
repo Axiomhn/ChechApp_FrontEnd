@@ -53,3 +53,7 @@ Usar siempre `@/` → `src/` (ej: `import api from "@/lib/axios"`).
 - `npm run electron-dev` — desarrollo (Vite + Electron)
 - `npm run build` — compilar React
 - `npm run dist` — build + instalador NSIS (Windows)
+
+## Requerimientos de negocio
+
+Ver `business-requirements.mdc` para historias de usuario, criterios de aceptación por módulo (Login, Emisión, Proveedores, Ajuste fino) y restricciones de impresión.
