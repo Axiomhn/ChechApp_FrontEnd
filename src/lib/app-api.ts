@@ -2,9 +2,9 @@ import type { AppSettings, ChechAppApi, Provider } from "@/types/electron"
 import type { CalibrationSettings, PrinterInfo } from "@/types/calibration"
 
 const INITIAL_PROVIDERS: Provider[] = [
-  { id: 1, nombre_razon: "Ferretería El Progreso", rtn: "08011990123456", telefono: "2678-1234" },
-  { id: 2, nombre_razon: "Tuberías y Accesorios del Norte S.A.", rtn: "01041985654321", telefono: "9876-5432" },
-  { id: 3, nombre_razon: "Distribuidora El Negrito", rtn: "18041998001223", telefono: "3210-9988" },
+  { id: "mock-1", nombre_razon: "Ferretería El Progreso", rtn: "08011990123456", telefono: "2678-1234" },
+  { id: "mock-2", nombre_razon: "Tuberías y Accesorios del Norte S.A.", rtn: "01041985654321", telefono: "9876-5432" },
+  { id: "mock-3", nombre_razon: "Distribuidora El Negrito", rtn: "18041998001223", telefono: "3210-9988" },
 ]
 
 let mockProviders: Provider[] = [...INITIAL_PROVIDERS]
@@ -46,7 +46,7 @@ function settingsToAppSettings(settings: CalibrationSettings): AppSettings {
 }
 
 type ProviderInput = {
-  id: number | null
+  id: string | null
   nombre_razon: string
   rtn?: string
   telefono?: string
@@ -82,7 +82,7 @@ const browserApi: ChechAppApi = {
         }
       } else {
         mockProviders.push({
-          id: nextProviderId++,
+          id: `mock-${nextProviderId++}`,
           nombre_razon: nombre,
           rtn: provider.rtn?.trim() || null,
           telefono: provider.telefono?.trim() || null,
@@ -91,7 +91,7 @@ const browserApi: ChechAppApi = {
 
       return { success: true }
     },
-    deleteProvider: async (id: number) => {
+    deleteProvider: async (id: string) => {
       mockProviders = mockProviders.filter((p) => p.id !== id)
       return { success: true }
     },

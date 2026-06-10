@@ -9,12 +9,24 @@ import {
   Phone,
   FileText,
   Users,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
-import { getAppApi } from "@/lib/app-api"
-import type { Provider } from "@/types/electron"
+import type { AxiosError } from "axios"
+import {
+  useCreateProviderMutation,
+  useDeleteProviderMutation,
+  useProvidersQuery,
+  useUpdateProviderMutation,
+} from "@/api/providers"
+import type { Provider } from "@/types/provider"
+import {
+  DEFAULT_PROVIDER_PAGE_SIZE,
+  PROVIDER_PAGE_SIZE_OPTIONS,
+} from "@/types/provider"
 
 interface ProviderForm {
-  id: number | null
+  id: string | null
   nombre_razon: string
   rtn: string
   telefono: string
@@ -28,47 +40,40 @@ const emptyProvider = (): ProviderForm => ({
 })
 
 export default function ProvidersPage() {
-  const [providers, setProviders] = useState<Provider[]>([])
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(DEFAULT_PROVIDER_PAGE_SIZE)
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentProvider, setCurrentProvider] =
     useState<ProviderForm>(emptyProvider())
   const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
-  const api = getAppApi()
+  const { data, isLoading, isFetching } = useProvidersQuery(
+    page,
+    limit,
+    debouncedSearch
+  )
+  const createMutation = useCreateProviderMutation()
+  const updateMutation = useUpdateProviderMutation()
+  const deleteMutation = useDeleteProviderMutation()
 
-  const loadProviders = async () => {
-    try {
-      const res = await api.db.getProviders()
-      if (res.success && res.data) setProviders(res.data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
+  const providers = data?.items ?? []
+  const pagination = data?.pagination
+  const total = pagination?.total ?? 0
+  const totalPages = pagination?.totalPages ?? 1
+  const saving = createMutation.isPending || updateMutation.isPending
 
   useEffect(() => {
-    let active = true
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim())
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
 
-    api.db
-      .getProviders()
-      .then((res) => {
-        if (!active) return
-        if (res.success && res.data) setProviders(res.data)
-      })
-      .catch((err) => console.error(err))
-
-    return () => {
-      active = false
-    }
-  }, [api])
-
-  const filteredProviders = providers.filter(
-    (p) =>
-      p.nombre_razon.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.rtn && p.rtn.includes(searchTerm))
-  )
+  const currentPage = pagination?.page ?? page
 
   const handleOpenModal = (provider?: Provider) => {
     setCurrentProvider(
@@ -85,44 +90,60 @@ export default function ProvidersPage() {
     setIsModalOpen(true)
   }
 
+  const getApiErrorMessage = (err: unknown, fallback: string) => {
+    const axiosErr = err as AxiosError<{ message?: string; code?: string }>
+    return axiosErr.response?.data?.message ?? fallback
+  }
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!currentProvider.nombre_razon.trim()) {
       setError("El Nombre o Razón Social es requerido.")
       return
     }
-    setLoading(true)
+
     setError("")
+    const payload = {
+      nombre_razon: currentProvider.nombre_razon,
+      rtn: currentProvider.rtn,
+      telefono: currentProvider.telefono,
+    }
+
     try {
-      const res = await api.db.saveProvider(currentProvider)
-      if (res.success) {
-        await loadProviders()
-        setIsModalOpen(false)
-      } else if (res.error?.includes("UNIQUE")) {
+      if (currentProvider.id) {
+        await updateMutation.mutateAsync({ id: currentProvider.id, ...payload })
+      } else {
+        await createMutation.mutateAsync(payload)
+      }
+      setIsModalOpen(false)
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ code?: string; message?: string }>
+      if (axiosErr.response?.data?.code === "UNIQUE_VIOLATION") {
         setError("Ya existe un proveedor con este Nombre/Razón Social.")
       } else {
-        setError(res.error || "Error al guardar el proveedor.")
+        setError(getApiErrorMessage(err, "Error al guardar el proveedor."))
       }
-    } catch {
-      setError("Fallo de conexión con la base de datos local.")
-    } finally {
-      setLoading(false)
     }
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
-      const res = await api.db.deleteProvider(id)
-      if (res.success) {
-        setDeleteConfirmId(null)
-        await loadProviders()
-      } else {
-        alert("No se pudo eliminar el proveedor: " + res.error)
+      await deleteMutation.mutateAsync(id)
+      setDeleteConfirmId(null)
+      if (providers.length === 1 && page > 1) {
+        setPage((prev) => prev - 1)
       }
     } catch (err) {
-      console.error(err)
+      alert(
+        "No se pudo eliminar el proveedor: " +
+          getApiErrorMessage(err, "Error desconocido")
+      )
     }
   }
+
+  const rangeStart = total === 0 ? 0 : (currentPage - 1) * limit + 1
+  const rangeEnd = Math.min(currentPage * limit, total)
+  const showPagination = total > limit
 
   return (
     <div className="animated-fade-in providers-page">
@@ -130,8 +151,8 @@ export default function ProvidersPage() {
         <div>
           <h2 className="providers-title">Catálogo de Proveedores</h2>
           <p className="providers-count">
-            {providers.length} proveedor{providers.length !== 1 ? "es" : ""}{" "}
-            registrado{providers.length !== 1 ? "s" : ""}
+            {total} proveedor{total !== 1 ? "es" : ""} registrado
+            {total !== 1 ? "s" : ""}
           </p>
         </div>
         <button
@@ -162,8 +183,7 @@ export default function ProvidersPage() {
           </div>
           <span className="badge badge-navy">
             <Users size={12} style={{ marginRight: "4px" }} />
-            {filteredProviders.length} resultado
-            {filteredProviders.length !== 1 ? "s" : ""}
+            {total} resultado{total !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -180,11 +200,19 @@ export default function ProvidersPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredProviders.length > 0 ? (
-              filteredProviders.map((p) => (
+            {isLoading ? (
+              <tr>
+                <td colSpan={5} className="providers-empty-row">
+                  Cargando proveedores...
+                </td>
+              </tr>
+            ) : providers.length > 0 ? (
+              providers.map((p, index) => (
                 <tr key={p.id}>
                   <td>
-                    <span className="badge badge-sky">#{p.id}</span>
+                    <span className="badge badge-sky">
+                      #{(currentPage - 1) * limit + index + 1}
+                    </span>
                   </td>
                   <td className="providers-name-cell">{p.nombre_razon}</td>
                   <td>
@@ -222,6 +250,7 @@ export default function ProvidersPage() {
                             type="button"
                             className="btn btn-danger btn-sm"
                             onClick={() => handleDelete(p.id)}
+                            disabled={deleteMutation.isPending}
                           >
                             Sí, eliminar
                           </button>
@@ -257,6 +286,66 @@ export default function ProvidersPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="providers-pagination">
+        <div className="providers-pagination-info">
+          <label htmlFor="providers-page-size" className="providers-page-size-label">
+            Mostrar
+          </label>
+          <span className="providers-page-size-wrap">
+            <select
+              id="providers-page-size"
+              className="providers-page-size-select"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value))
+                setPage(1)
+              }}
+            >
+              {PROVIDER_PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </span>
+          <span className="providers-page-size-label">por página</span>
+          {total > 0 && (
+            <span className="providers-pagination-range">
+              {rangeStart}–{rangeEnd} de {total}
+              {isFetching && !isLoading ? " · actualizando..." : ""}
+            </span>
+          )}
+        </div>
+
+        {showPagination && (
+          <div className="providers-pagination-controls">
+            <span className="providers-pagination-page">
+              Página {currentPage} de {totalPages}
+            </span>
+            <button
+              type="button"
+              className="providers-page-btn"
+              onClick={() => setPage(Math.max(currentPage - 1, 1))}
+              disabled={currentPage <= 1 || isFetching}
+              aria-label="Página anterior"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </button>
+            <button
+              type="button"
+              className="providers-page-btn"
+              onClick={() => setPage(Math.min(currentPage + 1, totalPages))}
+              disabled={currentPage >= totalPages || isFetching}
+              aria-label="Página siguiente"
+            >
+              Siguiente
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -311,7 +400,7 @@ export default function ProvidersPage() {
                         })
                       }
                       placeholder="Ej. Distribuidora del Norte S.A."
-                      disabled={loading}
+                      disabled={saving}
                       required
                       autoFocus
                     />
@@ -335,7 +424,7 @@ export default function ProvidersPage() {
                         })
                       }
                       placeholder="Ej. 08011990123456 (14 dígitos)"
-                      disabled={loading}
+                      disabled={saving}
                       maxLength={20}
                     />
                   </div>
@@ -361,7 +450,7 @@ export default function ProvidersPage() {
                         })
                       }
                       placeholder="Ej. 2234-5678"
-                      disabled={loading}
+                      disabled={saving}
                     />
                   </div>
                 </div>
@@ -373,7 +462,7 @@ export default function ProvidersPage() {
                 type="button"
                 className="btn btn-secondary"
                 onClick={() => setIsModalOpen(false)}
-                disabled={loading}
+                disabled={saving}
               >
                 Cancelar
               </button>
@@ -381,9 +470,9 @@ export default function ProvidersPage() {
                 type="submit"
                 form="form-proveedor"
                 className="btn btn-primary"
-                disabled={loading}
+                disabled={saving}
               >
-                {loading
+                {saving
                   ? "Guardando..."
                   : currentProvider.id
                     ? "Guardar Cambios"
