@@ -49,8 +49,20 @@ export default function ProvidersPage() {
   }
 
   useEffect(() => {
-    loadProviders()
-  }, [])
+    let active = true
+
+    api.db
+      .getProviders()
+      .then((res) => {
+        if (!active) return
+        if (res.success && res.data) setProviders(res.data)
+      })
+      .catch((err) => console.error(err))
+
+    return () => {
+      active = false
+    }
+  }, [api])
 
   const filteredProviders = providers.filter(
     (p) =>

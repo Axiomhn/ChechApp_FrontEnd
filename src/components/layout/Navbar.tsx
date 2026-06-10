@@ -30,7 +30,7 @@ const Navbar = () => {
 
         <div className="flex items-center gap-2">
           <span className="text-black text-2xl font-normal font-['Segoe_UI_Symbol']">
-            {user?.name || user?.role || 'Usuario'}
+            {user?.name || user?.email || 'Usuario'}
           </span>
         </div>
 

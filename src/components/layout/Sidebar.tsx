@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
-import { useDispatch, useSelector } from "react-redux"
+import { useSelector } from "react-redux"
 import { Landmark, Users, Sliders, LogOut, Droplets } from "lucide-react"
 import type { RootState } from "@/store"
-import { logout } from "@/store/slices/authSlice"
+import { useLogoutMutation } from "@/api/auth"
 import ConfirmModal from "@/components/ui/ConfirmModal"
 
 const navItems = [
@@ -14,16 +14,17 @@ const navItems = [
 
 const Sidebar = () => {
   const user = useSelector((state: RootState) => state.auth.user)
-  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const logoutMutation = useLogoutMutation()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
-  const displayName =
-    user?.name || user?.nombre_completo || user?.email || "Usuario"
+  const displayName = user?.name || user?.email || "Usuario"
 
   const handleConfirmLogout = () => {
-    dispatch(logout())
-    navigate("/login")
+    setShowLogoutModal(false)
+    logoutMutation.mutate(undefined, {
+      onSettled: () => navigate("/login"),
+    })
   }
 
   return (
