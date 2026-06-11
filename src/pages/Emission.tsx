@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   Calendar,
   User,
@@ -8,10 +9,18 @@ import {
   AlertCircle,
   Search,
   CreditCard,
+  X,
 } from "lucide-react"
+import { useProvidersQuery } from "@/api/providers"
+import {
+  formatMontoInputWhileTyping,
+  formatMontoNumber,
+  parseMontoInput,
+} from "@/lib/monto-format"
 import { numberToLetters } from "@/lib/numberToLetters"
 import { getAppApi } from "@/lib/app-api"
-import type { AppSettings, Provider } from "@/types/electron"
+import type { AppSettings } from "@/types/electron"
+import type { Provider } from "@/types/provider"
 
 function generateDefaultDate() {
   const meses = [
@@ -25,10 +34,13 @@ function generateDefaultDate() {
   return `El Negrito, Yoro, ${dia} de ${mes} de ${anio}`
 }
 
+const PROVIDER_SEARCH_LIMIT = 50
+
 export default function EmissionPage() {
-  const [providers, setProviders] = useState<Provider[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
-  const [searchProvider, setSearchProvider] = useState("")
+  const [providerQuery, setProviderQuery] = useState("")
+  const [debouncedProviderQuery, setDebouncedProviderQuery] = useState("")
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
   const [fecha, setFecha] = useState(generateDefaultDate)
   const [monto, setMonto] = useState("")
   const [montoLetras, setMontoLetras] = useState("")
@@ -39,13 +51,18 @@ export default function EmissionPage() {
   const [printingType, setPrintingType] = useState("")
 
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const loadData = async () => {
-    try {
-      const api = getAppApi()
-      const provRes = await api.db.getProviders()
-      if (provRes.success && provRes.data) setProviders(provRes.data)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
-      const setRes = await api.config.getSettings()
+  const { data: providersData, isFetching: loadingProviders } = useProvidersQuery(
+    1,
+    PROVIDER_SEARCH_LIMIT,
+    debouncedProviderQuery
+  )
+  const providers = providersData?.items ?? []
+
+  const loadSettings = async () => {
+    try {
+      const setRes = await getAppApi().config.getSettings()
       if (setRes.success && setRes.data) setSettings(setRes.data)
     } catch (err) {
       console.error(err)
@@ -54,12 +71,10 @@ export default function EmissionPage() {
 
   useEffect(() => {
     let active = true
-    const api = getAppApi()
-
-    Promise.all([api.db.getProviders(), api.config.getSettings()])
-      .then(([provRes, setRes]) => {
+    getAppApi()
+      .config.getSettings()
+      .then((setRes) => {
         if (!active) return
-        if (provRes.success && provRes.data) setProviders(provRes.data)
         if (setRes.success && setRes.data) setSettings(setRes.data)
       })
       .catch((err) => console.error(err))
@@ -68,6 +83,13 @@ export default function EmissionPage() {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedProviderQuery(providerQuery.trim())
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [providerQuery])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -83,38 +105,60 @@ export default function EmissionPage() {
   }, [])
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setMonto(val)
-    if (val && !isNaN(Number(val)) && parseFloat(val) >= 0) {
-      setMontoLetras(numberToLetters(val))
+    const formatted = formatMontoInputWhileTyping(e.target.value)
+    setMonto(formatted)
+    const numeric = parseMontoInput(formatted)
+    if (numeric !== null && numeric >= 0) {
+      setMontoLetras(numberToLetters(numeric))
     } else {
       setMontoLetras("")
     }
   }
 
   const handleProviderInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchProvider(e.target.value)
+    setProviderQuery(e.target.value)
     setShowDropdown(true)
   }
 
   const selectProvider = (prov: Provider) => {
-    setSearchProvider(prov.nombre_razon)
+    setSelectedProvider(prov)
+    setProviderQuery("")
     setShowDropdown(false)
   }
 
-  const filteredProviders = providers.filter(
-    (p) =>
-      p.nombre_razon.toLowerCase().includes(searchProvider.toLowerCase()) ||
-      (p.rtn && p.rtn.toLowerCase().includes(searchProvider.toLowerCase()))
-  )
+  const clearSelectedProvider = () => {
+    setSelectedProvider(null)
+    setProviderQuery("")
+    setShowDropdown(false)
+    searchInputRef.current?.focus()
+  }
+
+  const montoNumerico = parseMontoInput(monto)
+
+  const isFormComplete =
+    fecha.trim() !== "" &&
+    selectedProvider !== null &&
+    montoNumerico !== null &&
+    montoNumerico > 0 &&
+    montoLetras.trim() !== ""
 
   const validateForm = () => {
-    if (!searchProvider.trim()) {
-      setPrintError("Debe seleccionar o escribir un Beneficiario.")
+    if (!selectedProvider) {
+      setPrintError(
+        "Debe seleccionar un proveedor del catálogo. Si no aparece, regístrelo en Catálogo de Proveedores."
+      )
       return false
     }
-    if (!monto || isNaN(Number(monto)) || parseFloat(monto) <= 0) {
+    if (!fecha.trim()) {
+      setPrintError("Ingrese el lugar y la fecha del comprobante.")
+      return false
+    }
+    if (montoNumerico === null || montoNumerico <= 0) {
       setPrintError("Ingrese un monto numérico válido mayor a cero.")
+      return false
+    }
+    if (!montoLetras.trim()) {
+      setPrintError("El monto en letras no pudo generarse. Verifique el monto ingresado.")
       return false
     }
     return true
@@ -123,9 +167,12 @@ export default function EmissionPage() {
   const resetForm = () => {
     setMonto("")
     setMontoLetras("")
-    setSearchProvider("")
-    loadData()
+    setSelectedProvider(null)
+    setProviderQuery("")
+    loadSettings()
   }
+
+  const beneficiario = selectedProvider?.nombre_razon ?? ""
 
   const handlePrintOrden = async () => {
     if (!validateForm()) return
@@ -136,14 +183,15 @@ export default function EmissionPage() {
     setPrintSuccess("")
 
     try {
+      const api = getAppApi()
       const configRes = await api.config.getSettings()
       const cfg = configRes.success ? configRes.data : settings
       const printerName = cfg?.printer_name || "Microsoft Print to PDF"
 
       const payload = {
         fecha,
-        beneficiario: searchProvider,
-        monto: parseFloat(monto).toFixed(2),
+        beneficiario,
+        monto: formatMontoNumber(montoNumerico!),
         montoLetras,
       }
 
@@ -158,16 +206,12 @@ export default function EmissionPage() {
         letras_y: 0,
       }
 
-      const printMethod = cfg?.print_method || "graphical"
-      const result =
-        printMethod === "native"
-          ? await api.print.nativeEscP(
-              printerName,
-              "ORDEN_PAGO",
-              payload,
-              offsets
-            )
-          : await api.print.graphical("ORDEN_PAGO", payload, offsets)
+      // Orden de pago usa plantilla HTML completa → impresión gráfica
+      const result = await api.print.graphical(
+        "ORDEN_PAGO",
+        payload,
+        offsets
+      )
 
       if (result.success) {
         setPrintSuccess(
@@ -197,6 +241,7 @@ export default function EmissionPage() {
     setPrintSuccess("")
 
     try {
+      const api = getAppApi()
       const configRes = await api.config.getSettings()
       const cfg = configRes.success ? configRes.data : settings
       const printerName = cfg?.printer_name || "Microsoft Print to PDF"
@@ -214,12 +259,12 @@ export default function EmissionPage() {
 
       const payload = {
         fecha,
-        beneficiario: searchProvider,
-        monto: parseFloat(monto).toFixed(2),
+        beneficiario,
+        monto: formatMontoNumber(montoNumerico!),
         montoLetras,
       }
 
-      const printMethod = cfg?.print_method || "graphical"
+      const printMethod = cfg?.print_method || "native"
       const result =
         printMethod === "native"
           ? await api.print.nativeEscP(printerName, "CHEQUE", payload, offsets)
@@ -301,40 +346,106 @@ export default function EmissionPage() {
                 />
                 Sírvase Pagar a la Orden de (Proveedor / Beneficiario)
               </label>
-              <div className="input-wrapper">
-                <span className="input-icon">
-                  <User size={16} />
-                </span>
-                <input
-                  id="proveedor"
-                  type="text"
-                  className="has-icon"
-                  value={searchProvider}
-                  onChange={handleProviderInput}
-                  onFocus={() => setShowDropdown(true)}
-                  placeholder="Escriba nombre o RTN para buscar..."
-                  autoComplete="off"
-                />
-              </div>
 
-              {showDropdown && filteredProviders.length > 0 && (
-                <ul className="autocomplete-dropdown">
-                  {filteredProviders.map((p) => (
-                    <li
-                      key={p.id}
-                      className="autocomplete-item"
-                      onMouseDown={() => selectProvider(p)}
-                    >
-                      <div className="autocomplete-item-name">
-                        {p.nombre_razon}
-                      </div>
-                      <div className="autocomplete-item-meta">
-                        RTN: {p.rtn || "No registrado"}&nbsp;&nbsp;|&nbsp;&nbsp;Tel:{" "}
-                        {p.telefono || "Sin teléfono"}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+              {selectedProvider ? (
+                <div className="emission-provider-selected">
+                  <User size={16} />
+                  <div className="emission-provider-selected-text">
+                    <span className="emission-provider-selected-label">
+                      Beneficiario seleccionado
+                    </span>
+                    <span className="emission-provider-selected-name">
+                      {selectedProvider.nombre_razon}
+                    </span>
+                    {(selectedProvider.rtn || selectedProvider.telefono) && (
+                      <span className="emission-provider-selected-meta">
+                        {selectedProvider.rtn
+                          ? `RTN: ${selectedProvider.rtn}`
+                          : ""}
+                        {selectedProvider.rtn && selectedProvider.telefono
+                          ? " · "
+                          : ""}
+                        {selectedProvider.telefono
+                          ? `Tel: ${selectedProvider.telefono}`
+                          : ""}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm emission-provider-change-btn"
+                    onClick={clearSelectedProvider}
+                  >
+                    <X size={14} />
+                    Cambiar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="input-wrapper">
+                    <span className="input-icon">
+                      <Search size={16} />
+                    </span>
+                    <input
+                      ref={searchInputRef}
+                      id="proveedor"
+                      type="text"
+                      className="has-icon"
+                      value={providerQuery}
+                      onChange={handleProviderInput}
+                      onFocus={() => setShowDropdown(true)}
+                      placeholder="Buscar por nombre o RTN en el catálogo..."
+                      autoComplete="off"
+                    />
+                  </div>
+                  <span className="calibration-field-hint">
+                    Solo puede imprimir proveedores registrados. Si no lo
+                    encuentra,{" "}
+                    <Link to="/providers">agréguelo en Catálogo de Proveedores</Link>.
+                  </span>
+
+                  {showDropdown && (
+                    <ul className="autocomplete-dropdown">
+                      {loadingProviders ? (
+                        <li className="autocomplete-empty">
+                          Buscando proveedores...
+                        </li>
+                      ) : providers.length > 0 ? (
+                        providers.map((p) => (
+                          <li
+                            key={p.id}
+                            className="autocomplete-item"
+                            onMouseDown={() => selectProvider(p)}
+                          >
+                            <div className="autocomplete-item-name">
+                              {p.nombre_razon}
+                            </div>
+                            <div className="autocomplete-item-meta">
+                              RTN: {p.rtn || "No registrado"}
+                              &nbsp;&nbsp;|&nbsp;&nbsp;Tel:{" "}
+                              {p.telefono || "Sin teléfono"}
+                            </div>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="autocomplete-empty">
+                          No se encontraron proveedores.
+                          {providerQuery.trim() ? (
+                            <>
+                              {" "}
+                              <Link to="/providers">
+                                Regístrelo en Catálogo de Proveedores
+                              </Link>
+                              .
+                            </>
+                          ) : (
+                            " El catálogo está vacío."
+                          )}
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </>
               )}
             </div>
 
@@ -350,13 +461,13 @@ export default function EmissionPage() {
                 <span className="input-icon input-icon-monto">L.</span>
                 <input
                   id="monto"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={monto}
                   onChange={handleMontoChange}
                   placeholder="0.00"
                   className="input-monto"
+                  autoComplete="off"
                 />
               </div>
             </div>
@@ -393,7 +504,7 @@ export default function EmissionPage() {
                   type="button"
                   className="btn btn-primary btn-lg"
                   onClick={handlePrintOrden}
-                  disabled={printing}
+                  disabled={printing || !isFormComplete}
                   id="btn-imprimir-orden"
                 >
                   <FileText size={17} />
@@ -406,7 +517,7 @@ export default function EmissionPage() {
                   type="button"
                   className="btn btn-sky btn-lg"
                   onClick={handlePrintCheque}
-                  disabled={printing}
+                  disabled={printing || !isFormComplete}
                   id="btn-imprimir-cheque"
                 >
                   <CreditCard size={17} />

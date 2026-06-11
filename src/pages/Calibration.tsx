@@ -21,7 +21,7 @@ import {
 function mapApiSettings(data: AppSettings): CalibrationSettings {
   return {
     printer_name: data.printer_name || "",
-    print_method: data.print_method || "graphical",
+    print_method: data.print_method || "native",
     offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
     offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
     offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
@@ -34,7 +34,12 @@ function mapApiSettings(data: AppSettings): CalibrationSettings {
   }
 }
 
-const FONT_SIZE_OPTIONS = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20]
+const FONT_SIZE_MIN = 8
+const FONT_SIZE_MAX = 20
+const FONT_SIZE_OPTIONS = Array.from(
+  { length: FONT_SIZE_MAX - FONT_SIZE_MIN + 1 },
+  (_, i) => FONT_SIZE_MIN + i
+)
 
 const OFFSET_SUMMARY = [
   { label: "Fecha", xKey: "offset_cheque_fecha_x", yKey: "offset_cheque_fecha_y" },
@@ -213,11 +218,11 @@ export default function CalibrationPage() {
                     setSettings({ ...settings, print_method: e.target.value })
                   }
                 >
-                  <option value="graphical">
-                    Gráfico Windows (HTML → Driver)
-                  </option>
                   <option value="native">
                     Nativo ESC/P (Spooler RAW · LX-350)
+                  </option>
+                  <option value="graphical">
+                    Gráfico Windows (HTML → Driver)
                   </option>
                 </select>
               </div>
@@ -281,8 +286,8 @@ export default function CalibrationPage() {
               <div className="calibration-range-wrap">
                 <input
                   type="range"
-                  min="8"
-                  max="20"
+                  min={FONT_SIZE_MIN}
+                  max={FONT_SIZE_MAX}
                   step="1"
                   value={settings.fuente_tamano}
                   onChange={(e) =>
