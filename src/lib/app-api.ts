@@ -1,5 +1,5 @@
 import type { ChechAppApi, Provider } from "@/types/electron"
-import type { CalibrationSettings, PrinterInfo } from "@/types/calibration"
+import type { CalibrationSettings } from "@/types/calibration"
 import {
   loadBrowserCalibration,
   saveBrowserCalibration,
@@ -13,11 +13,6 @@ const INITIAL_PROVIDERS: Provider[] = [
 
 let mockProviders: Provider[] = [...INITIAL_PROVIDERS]
 let nextProviderId = 4
-
-const MOCK_PRINTERS: PrinterInfo[] = [
-  { name: "Microsoft Print to PDF", isDefault: true },
-  { name: "EPSON LX-350", isDefault: false },
-]
 
 type ProviderInput = {
   id: string | null
@@ -79,7 +74,7 @@ const browserApi: ChechAppApi = {
       const data = saveBrowserCalibration(settings)
       return { success: true, data }
     },
-    getPrinters: async () => MOCK_PRINTERS,
+    getPrinters: async () => [],
   },
   print: {
     nativeEscP: async () => ({

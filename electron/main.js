@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain } = require('electron');
 const path = require('path');
 const { loadSettings, saveSettings } = require('./calibration-store');
+const { printGraphical } = require('./print-graphical');
 
 let mainWindow;
 
@@ -83,10 +84,14 @@ function registerIpcHandlers() {
     error: 'Impresión nativa en desarrollo.',
   }));
 
-  ipcMain.handle('print:graphical', async () => ({
-    success: false,
-    error: 'Impresión gráfica en desarrollo.',
-  }));
+  ipcMain.handle('print:graphical', async (_event, { documentType, data }) => {
+    try {
+      return await printGraphical(app.getPath('userData'), documentType, data);
+    } catch (err) {
+      console.error('print:graphical', err);
+      return { success: false, error: err.message };
+    }
+  });
 }
 
 app.whenReady().then(() => {

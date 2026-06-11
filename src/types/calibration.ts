@@ -14,7 +14,7 @@ export interface CalibrationSettings {
 
 export const defaultCalibrationSettings = (): CalibrationSettings => ({
   printer_name: "",
-  print_method: "graphical",
+  print_method: "native",
   offset_cheque_fecha_x: 0,
   offset_cheque_fecha_y: 0,
   offset_cheque_monto_x: 0,
