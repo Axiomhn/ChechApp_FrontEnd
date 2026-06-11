@@ -3,14 +3,12 @@ const path = require('path');
 
 const LAYOUT_PATH = path.join(__dirname, 'templates', 'orden-pago-layout.html');
 
-/** Diseño exportado ~2480×3030px; escala a carta 8.5"×11". */
+/** Diseño Figma ~2480×3030px → carta 8.5"×11" (816×1056px @ 96dpi). */
 const DESIGN_WIDTH = 2480;
 const DESIGN_HEIGHT = 3030;
-const PAGE_WIDTH_IN = 8.5;
-const PAGE_HEIGHT_IN = 11;
-const SCALE = PAGE_WIDTH_IN / (DESIGN_WIDTH / 96);
-
-let cachedLayout = null;
+const PAGE_WIDTH_PX = 816;
+const PAGE_HEIGHT_PX = 1056;
+const SCALE = PAGE_WIDTH_PX / DESIGN_WIDTH;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -20,11 +18,48 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-function getLayout() {
-  if (!cachedLayout) {
-    cachedLayout = fs.readFileSync(LAYOUT_PATH, 'utf8');
+/** Orden de pago solo necesita la fecha, no el lugar. */
+function formatMontoDisplay(monto) {
+  const cleaned = String(monto ?? '').replace(/,/g, '').trim();
+  if (!cleaned) return '';
+  const n = parseFloat(cleaned);
+  if (!Number.isFinite(n)) return String(monto ?? '');
+  return n.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function extractFechaSolo(fechaCompleta) {
+  const s = String(fechaCompleta ?? '').trim();
+  if (!s) return '';
+
+  const afterLastComma = s.match(/,\s*([^,]+)$/);
+  if (afterLastComma) {
+    const candidate = afterLastComma[1].trim();
+    if (/\d{1,2}\s+de\s+/i.test(candidate)) return candidate;
   }
-  return cachedLayout;
+
+  const inline = s.match(/\d{1,2}\s+de\s+[\p{L}\s]+\s+de\s+\d{4}/iu);
+  if (inline) return inline[0].trim();
+
+  return s;
+}
+
+/** Espacio hasta UNIDAD EJECUTORA (876px) menos margen. */
+const FECHA_FIELD_LEFT = 399;
+const FECHA_FIELD_MAX_WIDTH = 470;
+
+function getFechaFontSize(fecha) {
+  const text = String(fecha ?? '').trim();
+  if (!text) return 44;
+
+  const size = Math.floor(FECHA_FIELD_MAX_WIDTH / (text.length * 0.52));
+  return Math.max(30, Math.min(44, size));
+}
+
+function getLayout() {
+  return fs.readFileSync(LAYOUT_PATH, 'utf8');
 }
 
 function fieldStyle(left, top, extra = '') {
@@ -35,8 +70,7 @@ function fieldStyle(left, top, extra = '') {
     'color:black',
     "font-family:'Alexandria',Arial,sans-serif",
     'font-weight:400',
-    'background:white',
-    'z-index:2',
+    'z-index:10',
     extra,
   ]
     .filter(Boolean)
@@ -44,19 +78,90 @@ function fieldStyle(left, top, extra = '') {
 }
 
 function buildFieldDiv(className, style, content) {
+  if (!content) return '';
   return `<div class="orden-field ${className}" style="${style}">${escapeHtml(content)}</div>`;
 }
 
+const MONTO_LETRAS_LINE1_LEFT = 552;
+const MONTO_LETRAS_LINE1_WIDTH = 1694;
+const MONTO_LETRAS_LINE2_LEFT = 156;
+const MONTO_LETRAS_LINE2_WIDTH = 2090;
+const MONTO_LETRAS_ROW1_TOP = 719;
+const MONTO_LETRAS_ROW2_TOP = 801;
+const MONTO_LETRAS_LINE1_MAX_CHARS = 68;
+
+function splitMontoLetras(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return { line1: '', line2: '' };
+  if (value.length <= MONTO_LETRAS_LINE1_MAX_CHARS) {
+    return { line1: value, line2: '' };
+  }
+
+  let splitAt = value.lastIndexOf(' ', MONTO_LETRAS_LINE1_MAX_CHARS);
+  if (splitAt <= 0) splitAt = MONTO_LETRAS_LINE1_MAX_CHARS;
+
+  return {
+    line1: value.slice(0, splitAt).trim(),
+    line2: value.slice(splitAt).trim(),
+  };
+}
+
+/** Renglón 1 tras "LA SUMA DE :"; renglón 2 con ancho completo, en la 2ª línea del formulario. */
+function buildMontoLetrasDiv(content) {
+  const { line1, line2 } = splitMontoLetras(content);
+  if (!line1 && !line2) return '';
+
+  const lineStyle =
+    'font-size:42px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+
+  if (!line2) {
+    return buildFieldDiv(
+      'orden-letras',
+      fieldStyle(
+        MONTO_LETRAS_LINE1_LEFT,
+        MONTO_LETRAS_ROW1_TOP,
+        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+      ),
+      line1
+    );
+  }
+
+  return [
+    buildFieldDiv(
+      'orden-letras-l1',
+      fieldStyle(
+        MONTO_LETRAS_LINE1_LEFT,
+        MONTO_LETRAS_ROW1_TOP,
+        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+      ),
+      line1
+    ),
+    buildFieldDiv(
+      'orden-letras-l2',
+      fieldStyle(
+        MONTO_LETRAS_LINE2_LEFT,
+        MONTO_LETRAS_ROW2_TOP,
+        `${lineStyle};width:${MONTO_LETRAS_LINE2_WIDTH}px`
+      ),
+      line2
+    ),
+  ].join('\n    ');
+}
+
 function buildOrdenPagoHtml(data) {
-  const fecha = data.fecha || '';
+  const fecha = extractFechaSolo(data.fecha);
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
-  const monto = data.monto || '';
+  const monto = formatMontoDisplay(data.monto);
 
   const fields = [
     buildFieldDiv(
       'orden-fecha',
-      fieldStyle(399, 543, 'font-size:55px;max-width:450px;white-space:nowrap'),
+      fieldStyle(
+        FECHA_FIELD_LEFT,
+        543,
+        `font-size:${getFechaFontSize(fecha)}px;max-width:${FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
+      ),
       fecha
     ),
     buildFieldDiv(
@@ -64,17 +169,19 @@ function buildOrdenPagoHtml(data) {
       fieldStyle(1081, 631, 'font-size:48px;max-width:1280px;white-space:nowrap'),
       beneficiario
     ),
-    buildFieldDiv(
-      'orden-letras',
-      fieldStyle(552, 719, 'font-size:42px;width:1694px;line-height:1.15;white-space:normal'),
-      montoLetras
-    ),
+    buildMontoLetrasDiv(montoLetras),
     buildFieldDiv(
       'orden-monto',
-      fieldStyle(520, 807, 'font-size:55px;white-space:nowrap'),
+      fieldStyle(
+        855,
+        807,
+        'font-size:48px;width:200px;text-align:left;white-space:nowrap'
+      ),
       monto
     ),
-  ].join('\n    ');
+  ]
+    .filter(Boolean)
+    .join('\n    ');
 
   const rawLayout = getLayout().trim();
   const insertAt = rawLayout.lastIndexOf('</div>');
@@ -97,26 +204,118 @@ function buildOrdenPagoHtml(data) {
   <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@400&family=Arapey&family=Bakbak+One&display=swap" rel="stylesheet" />
   <style>
     @page { size: letter; margin: 0; }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     html, body {
       margin: 0;
       padding: 0;
-      width: ${PAGE_WIDTH_IN}in;
-      height: ${PAGE_HEIGHT_IN}in;
+      width: ${PAGE_WIDTH_PX}px;
+      height: ${PAGE_HEIGHT_PX}px;
       overflow: hidden;
       background: white;
     }
     .orden-page {
       width: ${DESIGN_WIDTH}px;
       height: ${DESIGN_HEIGHT}px;
-      transform: scale(${SCALE});
-      transform-origin: top left;
       position: relative;
       background: white;
-      overflow: hidden;
+      zoom: ${SCALE};
     }
     .orden-field {
       word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    .orden-letras {
+      overflow: hidden;
+    }
+    .orden-tabla {
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-family: 'Alexandria', Arial, sans-serif;
+      font-size: 40px;
+      font-weight: 400;
+      color: black;
+      background: white;
+    }
+    .orden-tabla th,
+    .orden-tabla td {
+      border: 3px solid black;
+      text-align: center;
+      vertical-align: middle;
+      padding: 4px 8px;
+      box-sizing: border-box;
+    }
+    .orden-tabla-codigos {
+      width: 486px;
+    }
+    .orden-tabla-codigos th,
+    .orden-tabla-codigos td {
+      width: 162px;
+      height: 58px;
+    }
+    .orden-tabla-codigos tbody td {
+      height: 63px;
+    }
+    .orden-tabla-descripcion {
+      width: 2200px;
+    }
+    .orden-tabla-descripcion th:nth-child(1),
+    .orden-tabla-descripcion td:nth-child(1) {
+      width: 1621px;
+    }
+    .orden-tabla-descripcion th:nth-child(2),
+    .orden-tabla-descripcion td:nth-child(2) {
+      width: 579px;
+    }
+    .orden-tabla-descripcion thead th {
+      height: 58px;
+      text-align: center;
+    }
+    .orden-tabla-descripcion tbody td:nth-child(1) {
+      text-align: left;
+    }
+    .orden-tabla-descripcion tbody td {
+      height: 63px;
+    }
+    .orden-tabla-estructura {
+      width: 2200px;
+      min-width: 2200px;
+      max-width: 2200px;
+    }
+    .orden-tabla-estructura .orden-estructura-titulo {
+      height: 58px;
+      font-size: 40px;
+      text-align: center;
+    }
+    .orden-tabla-estructura .orden-estructura-columnas th {
+      height: 124px;
+      font-size: 40px;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-chico {
+      font-size: 26px;
+      line-height: 1.05;
+      text-align: left;
+      padding-left: 10px;
+    }
+    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-medio {
+      font-size: 38px;
+      line-height: 1.1;
+    }
+    .orden-tabla-estructura tbody td {
+      height: 63px;
+    }
+    .orden-tabla-estructura .orden-estructura-fila-total td {
+      height: 63px;
+      text-align: center;
+    }
+    .orden-tabla-estructura .orden-estructura-total-spacer {
+      width: 1280px;
+      padding: 0;
+      border: none;
+      background: white;
+      line-height: 0;
+      font-size: 0;
     }
   </style>
 </head>
@@ -130,4 +329,6 @@ function buildOrdenPagoHtml(data) {
 
 module.exports = {
   buildOrdenPagoHtml,
+  extractFechaSolo,
+  SCALE,
 };

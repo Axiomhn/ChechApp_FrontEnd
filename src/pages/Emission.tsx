@@ -12,6 +12,11 @@ import {
   X,
 } from "lucide-react"
 import { useProvidersQuery } from "@/api/providers"
+import {
+  formatMontoInputWhileTyping,
+  formatMontoNumber,
+  parseMontoInput,
+} from "@/lib/monto-format"
 import { numberToLetters } from "@/lib/numberToLetters"
 import { getAppApi } from "@/lib/app-api"
 import type { AppSettings } from "@/types/electron"
@@ -100,10 +105,11 @@ export default function EmissionPage() {
   }, [])
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setMonto(val)
-    if (val && !isNaN(Number(val)) && parseFloat(val) >= 0) {
-      setMontoLetras(numberToLetters(val))
+    const formatted = formatMontoInputWhileTyping(e.target.value)
+    setMonto(formatted)
+    const numeric = parseMontoInput(formatted)
+    if (numeric !== null && numeric >= 0) {
+      setMontoLetras(numberToLetters(numeric))
     } else {
       setMontoLetras("")
     }
@@ -127,12 +133,13 @@ export default function EmissionPage() {
     searchInputRef.current?.focus()
   }
 
+  const montoNumerico = parseMontoInput(monto)
+
   const isFormComplete =
     fecha.trim() !== "" &&
     selectedProvider !== null &&
-    monto !== "" &&
-    !isNaN(Number(monto)) &&
-    parseFloat(monto) > 0 &&
+    montoNumerico !== null &&
+    montoNumerico > 0 &&
     montoLetras.trim() !== ""
 
   const validateForm = () => {
@@ -146,7 +153,7 @@ export default function EmissionPage() {
       setPrintError("Ingrese el lugar y la fecha del comprobante.")
       return false
     }
-    if (!monto || isNaN(Number(monto)) || parseFloat(monto) <= 0) {
+    if (montoNumerico === null || montoNumerico <= 0) {
       setPrintError("Ingrese un monto numérico válido mayor a cero.")
       return false
     }
@@ -184,7 +191,7 @@ export default function EmissionPage() {
       const payload = {
         fecha,
         beneficiario,
-        monto: parseFloat(monto).toFixed(2),
+        monto: formatMontoNumber(montoNumerico!),
         montoLetras,
       }
 
@@ -253,7 +260,7 @@ export default function EmissionPage() {
       const payload = {
         fecha,
         beneficiario,
-        monto: parseFloat(monto).toFixed(2),
+        monto: formatMontoNumber(montoNumerico!),
         montoLetras,
       }
 
@@ -454,13 +461,13 @@ export default function EmissionPage() {
                 <span className="input-icon input-icon-monto">L.</span>
                 <input
                   id="monto"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={monto}
                   onChange={handleMontoChange}
                   placeholder="0.00"
                   className="input-monto"
+                  autoComplete="off"
                 />
               </div>
             </div>
