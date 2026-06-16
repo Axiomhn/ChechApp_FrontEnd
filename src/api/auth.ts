@@ -1,7 +1,9 @@
 import { useMutation } from "@tanstack/react-query"
 import { useDispatch } from "react-redux"
 import api from "@/lib/axios"
+import { isApiMocksEnabled } from "@/lib/env"
 import { logout, setCredentials } from "@/store/slices/authSlice"
+import { mockLogin, mockLogout } from "@/mocks/backend-api"
 import type { LoginResponse } from "@/types/auth"
 
 export const useLoginMutation = () => {
@@ -9,6 +11,9 @@ export const useLoginMutation = () => {
 
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
+      if (isApiMocksEnabled()) {
+        return mockLogin(credentials)
+      }
       const response = await api.post<LoginResponse>("/auth/login", credentials)
       return response.data
     },
@@ -24,6 +29,10 @@ export const useLogoutMutation = () => {
 
   return useMutation({
     mutationFn: async () => {
+      if (isApiMocksEnabled()) {
+        await mockLogout()
+        return
+      }
       try {
         await api.post("/auth/logout")
       } catch {

@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import api from "@/lib/axios"
+import { isApiMocksEnabled } from "@/lib/env"
+import {
+  mockCreateProvider,
+  mockDeleteProvider,
+  mockListProviders,
+  mockUpdateProvider,
+} from "@/mocks/backend-api"
 import type {
   Provider,
   ProviderInput,
@@ -20,6 +27,9 @@ export const useProvidersQuery = (
   return useQuery({
     queryKey: providersQueryKey(page, limit, search),
     queryFn: async () => {
+      if (isApiMocksEnabled()) {
+        return mockListProviders(page, limit, search)
+      }
       const response = await api.get<ProvidersListResponse>("/providers", {
         params: { page, limit, search: search || undefined },
       })
@@ -33,6 +43,10 @@ export const useCreateProviderMutation = () => {
 
   return useMutation({
     mutationFn: async (payload: ProviderInput) => {
+      if (isApiMocksEnabled()) {
+        const provider = await mockCreateProvider(payload)
+        return { data: provider }
+      }
       const response = await api.post<{ data: Provider }>("/providers", payload)
       return response.data
     },
@@ -50,6 +64,10 @@ export const useUpdateProviderMutation = () => {
       id,
       ...payload
     }: ProviderInput & { id: string }) => {
+      if (isApiMocksEnabled()) {
+        const provider = await mockUpdateProvider(id, payload)
+        return { data: provider }
+      }
       const response = await api.put<{ data: Provider }>(
         `/providers/${id}`,
         payload
@@ -67,6 +85,10 @@ export const useDeleteProviderMutation = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
+      if (isApiMocksEnabled()) {
+        await mockDeleteProvider(id)
+        return
+      }
       await api.delete(`/providers/${id}`)
     },
     onSuccess: () => {
