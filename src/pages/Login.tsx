@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom"
 import { useForm, type Resolver } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
-import { User, Lock, AlertCircle, Shield, Loader2, Droplets } from "lucide-react"
+import { User, Lock, AlertCircle, Shield, Loader2, Droplets, Info } from "lucide-react"
 import { useLoginMutation } from "@/api/auth"
 import { cn } from "@/lib/utils"
+import { isApiMocksEnabled } from "@/lib/env"
+import { MOCK_ADMIN_EMAIL, MOCK_ADMIN_PASSWORD } from "@/mocks/backend-api"
 
 const schema = yup.object({
   email: yup.string().trim().required("Por favor complete todos los campos."),
@@ -54,6 +56,7 @@ export default function LoginPage() {
   }
 
   const isLoading = loginMutation.isPending
+  const apiMocksEnabled = isApiMocksEnabled()
 
   return (
     <div className="flex h-screen bg-white">
@@ -113,6 +116,20 @@ export default function LoginPage() {
           <p className="mb-8 text-[13px] text-[#6B7C93]">
             Sistema de Emisión de Cheques y Órdenes de Pago
           </p>
+
+          {apiMocksEnabled && (
+            <div
+              className="mb-4 flex items-start gap-2.5 rounded-lg border border-[#AED6F1] bg-[#EBF5FB] px-4 py-3 text-[13px] leading-snug text-[#1A5276]"
+              role="status"
+            >
+              <Info size={16} className="mt-0.5 shrink-0" />
+              <span>
+                Modo mocks activo: no se requiere backend. Use{" "}
+                <strong>{MOCK_ADMIN_EMAIL}</strong> /{" "}
+                <strong>{MOCK_ADMIN_PASSWORD}</strong>
+              </span>
+            </div>
+          )}
 
           {displayError && (
             <div
