@@ -282,34 +282,19 @@ function buildOrdenPagoHtml(data) {
     }
     .orden-tabla-estructura .orden-estructura-columnas th {
       height: 124px;
-      font-size: 40px;
+      font-size: 38px;
       text-align: center;
       line-height: 1.1;
     }
-    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-chico {
-      font-size: 26px;
-      line-height: 1.05;
+    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-detalle {
       text-align: left;
       padding-left: 10px;
     }
-    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-medio {
-      font-size: 38px;
-      line-height: 1.1;
+    .orden-tabla-estructura tbody td:nth-child(1) {
+      text-align: left;
     }
     .orden-tabla-estructura tbody td {
       height: 63px;
-    }
-    .orden-tabla-estructura .orden-estructura-fila-total td {
-      height: 63px;
-      text-align: center;
-    }
-    .orden-tabla-estructura .orden-estructura-total-spacer {
-      width: 1280px;
-      padding: 0;
-      border: none;
-      background: white;
-      line-height: 0;
-      font-size: 0;
     }
   </style>
 </head>
