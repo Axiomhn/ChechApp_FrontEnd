@@ -267,15 +267,23 @@ function buildOrdenPagoHtml(data) {
     .orden-tabla-estructura .orden-estructura-columnas th {
       height: 124px;
       font-size: 38px;
-      text-align: center;
       line-height: 1.1;
     }
-    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-detalle {
-      text-align: left;
-      padding-left: 10px;
+    .orden-tabla-estructura th.orden-estructura-th-detalle,
+    .orden-tabla-estructura td.orden-estructura-col-detalle {
+      width: 1820px;
+      max-width: 1820px;
+      text-align: center !important;
+      vertical-align: middle;
+      padding-left: 8px;
+      padding-right: 8px;
     }
-    .orden-tabla-estructura tbody td:nth-child(1) {
-      text-align: left;
+    .orden-tabla-estructura th.orden-estructura-th-subtotal,
+    .orden-tabla-estructura td:nth-child(2) {
+      width: 380px;
+      max-width: 380px;
+      text-align: center !important;
+      vertical-align: middle;
     }
     .orden-tabla-estructura tbody td {
       height: 63px;
