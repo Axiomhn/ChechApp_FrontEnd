@@ -132,6 +132,95 @@ function buildMontoLetrasDiv(content) {
   ].join('\n    ');
 }
 
+const DESCRIPCION_ROW_COUNT = 4;
+const ESTRUCTURA_ROW_COUNT = 5;
+const DESCRIPCION_MAX_LENGTH = 100;
+const DETALLE_GASTO_MAX_LENGTH = 80;
+
+function normalizeDescripciones(descripciones) {
+  const source = Array.isArray(descripciones) ? descripciones : [];
+  return Array.from({ length: DESCRIPCION_ROW_COUNT }, (_, index) =>
+    String(source[index] ?? '').trim().slice(0, DESCRIPCION_MAX_LENGTH)
+  );
+}
+
+function parseMontoValue(value) {
+  const cleaned = String(value ?? '').replace(/,/g, '').trim();
+  if (!cleaned) return null;
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sumEstructuraSubTotales(estructura) {
+  const source = Array.isArray(estructura) ? estructura : [];
+  let sum = 0;
+  let hasValue = false;
+
+  for (let i = 0; i < ESTRUCTURA_ROW_COUNT; i++) {
+    const row = source[i] ?? {};
+    const parsed = parseMontoValue(row.subTotal ?? row.sub_total ?? '');
+    if (parsed === null) continue;
+    sum += parsed;
+    hasValue = true;
+  }
+
+  return hasValue ? formatMontoDisplay(sum) : '';
+}
+
+function normalizeEstructura(estructura) {
+  const source = Array.isArray(estructura) ? estructura : [];
+  return Array.from({ length: ESTRUCTURA_ROW_COUNT }, (_, index) => {
+    const row = source[index] ?? {};
+    const subTotalRaw = String(row.subTotal ?? row.sub_total ?? '').trim();
+    return {
+      detalle: String(row.detalle ?? '')
+        .trim()
+        .slice(0, DETALLE_GASTO_MAX_LENGTH),
+      subTotal: subTotalRaw ? formatMontoDisplay(subTotalRaw) : '',
+    };
+  });
+}
+
+function buildDescripcionTableBody(descripciones) {
+  return normalizeDescripciones(descripciones)
+    .map((text) => {
+      const content = text ? escapeHtml(text) : '&nbsp;';
+      return `            <tr><td>${content}</td></tr>`;
+    })
+    .join('\n');
+}
+
+function buildEstructuraTableBody(estructura) {
+  const dataRows = normalizeEstructura(estructura)
+    .map(({ detalle, subTotal }) => {
+      const detalleContent = detalle ? escapeHtml(detalle) : '&nbsp;';
+      const subTotalContent = subTotal ? escapeHtml(subTotal) : '&nbsp;';
+      return `            <tr><td class="orden-estructura-col-detalle">${detalleContent}</td><td>${subTotalContent}</td></tr>`;
+    })
+    .join('\n');
+
+  const grandTotal = sumEstructuraSubTotales(estructura);
+  const totalCellContent = grandTotal ? escapeHtml(grandTotal) : '&nbsp;';
+  const totalRow = `            <tr class="orden-estructura-fila-total"><td>TOTAL</td><td>${totalCellContent}</td></tr>`;
+
+  return dataRows ? `${dataRows}\n${totalRow}` : totalRow;
+}
+
+function fillOrdenTables(layout, data) {
+  const descripcionBody = buildDescripcionTableBody(data.descripciones);
+  const estructuraBody = buildEstructuraTableBody(data.estructura);
+
+  return layout
+    .replace(
+      /(<table class="orden-tabla orden-tabla-descripcion"[\s\S]*?<tbody>)[\s\S]*?(<\/tbody>)/,
+      `$1\n${descripcionBody}\n        $2`
+    )
+    .replace(
+      /(<table class="orden-tabla orden-tabla-estructura"[\s\S]*?<tbody>)[\s\S]*?(<\/tbody>)/,
+      `$1\n${estructuraBody}\n        $2`
+    );
+}
+
 function buildOrdenPagoHtml(data) {
   const lugarFecha = String(data.fecha ?? '').trim();
   const beneficiario = data.beneficiario || '';
@@ -167,7 +256,7 @@ function buildOrdenPagoHtml(data) {
     .filter(Boolean)
     .join('\n    ');
 
-  const rawLayout = getLayout().trim();
+  const rawLayout = fillOrdenTables(getLayout().trim(), data);
   const insertAt = rawLayout.lastIndexOf('</div>');
   const layout =
     insertAt === -1
@@ -253,6 +342,10 @@ function buildOrdenPagoHtml(data) {
     .orden-tabla-descripcion tbody td {
       height: 63px;
       text-align: left;
+      font-size: 36px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .orden-tabla-estructura {
       width: 2200px;
@@ -269,13 +362,20 @@ function buildOrdenPagoHtml(data) {
       font-size: 38px;
       line-height: 1.1;
     }
-    .orden-tabla-estructura th.orden-estructura-th-detalle,
-    .orden-tabla-estructura td.orden-estructura-col-detalle {
+    .orden-tabla-estructura th.orden-estructura-th-detalle {
       width: 1820px;
       max-width: 1820px;
       text-align: center !important;
       vertical-align: middle;
       padding-left: 8px;
+      padding-right: 8px;
+    }
+    .orden-tabla-estructura td.orden-estructura-col-detalle {
+      width: 1820px;
+      max-width: 1820px;
+      text-align: left !important;
+      vertical-align: middle;
+      padding-left: 10px;
       padding-right: 8px;
     }
     .orden-tabla-estructura th.orden-estructura-th-subtotal,
@@ -287,6 +387,14 @@ function buildOrdenPagoHtml(data) {
     }
     .orden-tabla-estructura tbody td {
       height: 63px;
+      font-size: 36px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .orden-tabla-estructura .orden-estructura-fila-total td {
+      text-align: center !important;
+      vertical-align: middle;
     }
   </style>
 </head>

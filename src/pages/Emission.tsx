@@ -21,6 +21,12 @@ import { numberToLetters } from "@/lib/numberToLetters"
 import { getAppApi } from "@/lib/app-api"
 import type { AppSettings } from "@/types/electron"
 import type { Provider } from "@/types/provider"
+import {
+  createEmptyDescripciones,
+  createEmptyEstructura,
+  DESCRIPCION_MAX_LENGTH,
+  DETALLE_GASTO_MAX_LENGTH,
+} from "@/types/emission"
 
 function generateDefaultDate() {
   const meses = [
@@ -44,6 +50,8 @@ export default function EmissionPage() {
   const [fecha, setFecha] = useState(generateDefaultDate)
   const [monto, setMonto] = useState("")
   const [montoLetras, setMontoLetras] = useState("")
+  const [descripciones, setDescripciones] = useState(createEmptyDescripciones)
+  const [estructura, setEstructura] = useState(createEmptyEstructura)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [printSuccess, setPrintSuccess] = useState("")
   const [printError, setPrintError] = useState("")
@@ -59,15 +67,6 @@ export default function EmissionPage() {
     debouncedProviderQuery
   )
   const providers = providersData?.items ?? []
-
-  const loadSettings = async () => {
-    try {
-      const setRes = await getAppApi().config.getSettings()
-      if (setRes.success && setRes.data) setSettings(setRes.data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
 
   useEffect(() => {
     let active = true
@@ -135,14 +134,14 @@ export default function EmissionPage() {
 
   const montoNumerico = parseMontoInput(monto)
 
-  const isFormComplete =
+  const isChequeFormComplete =
     fecha.trim() !== "" &&
     selectedProvider !== null &&
     montoNumerico !== null &&
     montoNumerico > 0 &&
     montoLetras.trim() !== ""
 
-  const validateForm = () => {
+  const validateChequeForm = () => {
     if (!selectedProvider) {
       setPrintError(
         "Debe seleccionar un proveedor del catálogo. Si no aparece, regístrelo en Catálogo de Proveedores."
@@ -164,18 +163,51 @@ export default function EmissionPage() {
     return true
   }
 
-  const resetForm = () => {
-    setMonto("")
-    setMontoLetras("")
-    setSelectedProvider(null)
-    setProviderQuery("")
-    loadSettings()
+  const handleDescripcionChange = (index: number, value: string) => {
+    const trimmed = value.slice(0, DESCRIPCION_MAX_LENGTH)
+    setDescripciones((prev) => {
+      const next = [...prev]
+      next[index] = trimmed
+      return next
+    })
   }
+
+  const handleEstructuraDetalleChange = (index: number, value: string) => {
+    const trimmed = value.slice(0, DETALLE_GASTO_MAX_LENGTH)
+    setEstructura((prev) => {
+      const next = [...prev]
+      next[index] = { ...next[index], detalle: trimmed }
+      return next
+    })
+  }
+
+  const handleEstructuraSubTotalChange = (index: number, value: string) => {
+    setEstructura((prev) => {
+      const next = [...prev]
+      next[index] = {
+        ...next[index],
+        subTotal: formatMontoInputWhileTyping(value),
+      }
+      return next
+    })
+  }
+
+  const buildPrintPayload = () => ({
+    fecha,
+    beneficiario,
+    monto: formatMontoNumber(montoNumerico!),
+    montoLetras,
+    descripciones: descripciones.map((row) => row.trim()),
+    estructura: estructura.map((row) => ({
+      detalle: row.detalle.trim(),
+      subTotal: row.subTotal.trim(),
+    })),
+  })
 
   const beneficiario = selectedProvider?.nombre_razon ?? ""
 
   const handlePrintOrden = async () => {
-    if (!validateForm()) return
+    if (!validateChequeForm()) return
 
     setPrinting(true)
     setPrintingType("ORDEN")
@@ -188,12 +220,7 @@ export default function EmissionPage() {
       const cfg = configRes.success ? configRes.data : settings
       const printerName = cfg?.printer_name || "Microsoft Print to PDF"
 
-      const payload = {
-        fecha,
-        beneficiario,
-        monto: formatMontoNumber(montoNumerico!),
-        montoLetras,
-      }
+      const payload = buildPrintPayload()
 
       const offsets = {
         fecha_x: 0,
@@ -217,7 +244,6 @@ export default function EmissionPage() {
         setPrintSuccess(
           `Orden de Pago enviada a "${printerName}" correctamente.`
         )
-        resetForm()
       } else {
         setPrintError(
           `Error al imprimir Orden de Pago: ${result.error || "Verifique la impresora."}`
@@ -233,7 +259,7 @@ export default function EmissionPage() {
   }
 
   const handlePrintCheque = async () => {
-    if (!validateForm()) return
+    if (!validateChequeForm()) return
 
     setPrinting(true)
     setPrintingType("CHEQUE")
@@ -257,12 +283,7 @@ export default function EmissionPage() {
         letras_y: parseInt(cfg?.offset_cheque_letras_y || "0"),
       }
 
-      const payload = {
-        fecha,
-        beneficiario,
-        monto: formatMontoNumber(montoNumerico!),
-        montoLetras,
-      }
+      const payload = buildPrintPayload()
 
       const printMethod = cfg?.print_method || "native"
       const result =
@@ -274,7 +295,6 @@ export default function EmissionPage() {
         setPrintSuccess(
           `Cheque enviado a "${printerName}" (Epson LX-350) correctamente.`
         )
-        resetForm()
       } else {
         setPrintError(
           `Error al imprimir Cheque: ${result.error || "Verifique la impresora LX-350."}`
@@ -495,6 +515,93 @@ export default function EmissionPage() {
               </div>
             </div>
 
+            <div className="emission-tables-section">
+              <div className="emission-tables-heading">
+                <FileText size={15} />
+                <span>Detalle del egreso (Orden de Pago)</span>
+              </div>
+              <p className="emission-tables-hint">
+                Campos opcionales para la Orden de Pago. Puede dejar filas en
+                blanco si no aplican.
+              </p>
+
+              <div className="emission-table-block">
+                <h4 className="emission-table-title">Descripción</h4>
+                <div className="emission-descripcion-list">
+                  {descripciones.map((row, index) => (
+                    <div key={`desc-${index}`} className="emission-descripcion-row">
+                      <label htmlFor={`descripcion-${index}`}>
+                        Fila {index + 1}
+                      </label>
+                      <input
+                        id={`descripcion-${index}`}
+                        type="text"
+                        value={row}
+                        maxLength={DESCRIPCION_MAX_LENGTH}
+                        onChange={(e) =>
+                          handleDescripcionChange(index, e.target.value)
+                        }
+                        placeholder={`Descripción fila ${index + 1}`}
+                        autoComplete="off"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="emission-table-block">
+                <h4 className="emission-table-title">Estructura</h4>
+                <div className="emission-estructura-table-wrap">
+                  <table className="emission-estructura-table">
+                    <thead>
+                      <tr>
+                        <th>Detalle objeto de gasto (opcional)</th>
+                        <th>Sub-total (opcional)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {estructura.map((row, index) => (
+                        <tr key={`est-${index}`}>
+                          <td>
+                            <input
+                              id={`estructura-detalle-${index}`}
+                              type="text"
+                              value={row.detalle}
+                              maxLength={DETALLE_GASTO_MAX_LENGTH}
+                              onChange={(e) =>
+                                handleEstructuraDetalleChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
+                              placeholder={`Detalle fila ${index + 1}`}
+                              autoComplete="off"
+                            />
+                          </td>
+                          <td>
+                            <input
+                              id={`estructura-subtotal-${index}`}
+                              type="text"
+                              inputMode="decimal"
+                              value={row.subTotal}
+                              onChange={(e) =>
+                                handleEstructuraSubTotalChange(
+                                  index,
+                                  e.target.value
+                                )
+                              }
+                              placeholder="0.00"
+                              autoComplete="off"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
             <div className="emission-print-section">
               <p className="emission-print-hint">
                 Seleccione el tipo de documento a imprimir:
@@ -504,7 +611,7 @@ export default function EmissionPage() {
                   type="button"
                   className="btn btn-primary btn-lg"
                   onClick={handlePrintOrden}
-                  disabled={printing || !isFormComplete}
+                  disabled={printing || !isChequeFormComplete}
                   id="btn-imprimir-orden"
                 >
                   <FileText size={17} />
@@ -517,7 +624,7 @@ export default function EmissionPage() {
                   type="button"
                   className="btn btn-sky btn-lg"
                   onClick={handlePrintCheque}
-                  disabled={printing || !isFormComplete}
+                  disabled={printing || !isChequeFormComplete}
                   id="btn-imprimir-cheque"
                 >
                   <CreditCard size={17} />

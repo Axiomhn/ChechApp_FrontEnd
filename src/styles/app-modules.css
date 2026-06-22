@@ -630,6 +630,105 @@
   width: 100%;
 }
 
+.app-shell .emission-tables-section {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-shell .emission-tables-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.app-shell .emission-tables-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.app-shell .emission-table-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-shell .emission-table-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.app-shell .emission-descripcion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-shell .emission-descripcion-row {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.app-shell .emission-descripcion-row label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.app-shell .emission-estructura-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.app-shell .emission-estructura-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 520px;
+}
+
+.app-shell .emission-estructura-table th,
+.app-shell .emission-estructura-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.app-shell .emission-estructura-table th {
+  background: var(--bg-subtle, #f5f8fc);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.app-shell .emission-estructura-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.app-shell .emission-estructura-table td:nth-child(2) {
+  width: 160px;
+}
+
+.app-shell .emission-estructura-table input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
 .app-shell .emission-print-section {
   border-top: 1px solid var(--border);
   padding-top: 20px;
