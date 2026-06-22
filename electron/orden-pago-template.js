@@ -10,6 +10,9 @@ const PAGE_WIDTH_PX = 816;
 const PAGE_HEIGHT_PX = 1056;
 const SCALE = PAGE_WIDTH_PX / DESIGN_WIDTH;
 
+/** Carta 8.5" × 11" en micrones — tamaño fijo de impresión/PDF. */
+const ORDEN_PAGO_PAGE_SIZE_MICRONS = { width: 215900, height: 279400 };
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -23,7 +26,8 @@ function formatMontoDisplay(monto) {
   if (!cleaned) return '';
   const n = parseFloat(cleaned);
   if (!Number.isFinite(n)) return String(monto ?? '');
-  return n.toLocaleString('en-US', {
+  const capped = Math.min(n, 999_999_999.99);
+  return capped.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -148,7 +152,8 @@ function parseMontoValue(value) {
   const cleaned = String(value ?? '').replace(/,/g, '').trim();
   if (!cleaned) return null;
   const n = parseFloat(cleaned);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n)) return null;
+  return Math.min(n, 999_999_999.99);
 }
 
 function sumEstructuraSubTotales(estructura) {
@@ -222,6 +227,7 @@ function fillOrdenTables(layout, data) {
 }
 
 function buildOrdenPagoHtml(data) {
+  // Tipografía y escala fijas en plantilla/CSS. No lee fuente_tamano ni calibración de cheque.
   const lugarFecha = String(data.fecha ?? '').trim();
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
@@ -408,5 +414,6 @@ function buildOrdenPagoHtml(data) {
 
 module.exports = {
   buildOrdenPagoHtml,
+  ORDEN_PAGO_PAGE_SIZE_MICRONS,
   SCALE,
 };

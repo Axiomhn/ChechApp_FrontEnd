@@ -247,7 +247,7 @@ export default function CalibrationPage() {
               <div>
                 <div className="card-title">Tamaño de Letra Global</div>
                 <div className="card-subtitle">
-                  Aplica a todos los campos del cheque
+                  Solo aplica al cheque impreso (no afecta la Orden de Pago)
                 </div>
               </div>
             </div>

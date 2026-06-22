@@ -1,6 +1,6 @@
 const { BrowserWindow } = require('electron');
 const { loadSettings } = require('./calibration-store');
-const { buildOrdenPagoHtml } = require('./orden-pago-template');
+const { buildOrdenPagoHtml, ORDEN_PAGO_PAGE_SIZE_MICRONS } = require('./orden-pago-template');
 const { buildChequeHtml, CHEQUE_PAGE_SIZE_MICRONS } = require('./cheque-template');
 
 let printWindow = null;
@@ -75,6 +75,7 @@ function printHtmlDocument({ html, deviceName, pageSize, printBackground = true 
 }
 
 async function printOrdenPago(userDataPath, data) {
+  // Orden de pago: plantilla con tipografía y escala fijas. Ignora fuente_tamano del cheque.
   const html = buildOrdenPagoHtml(data);
   const deviceName = resolvePrinterName(
     userDataPath,
@@ -92,7 +93,7 @@ async function printOrdenPago(userDataPath, data) {
   return printHtmlDocument({
     html,
     deviceName,
-    pageSize: 'Letter',
+    pageSize: ORDEN_PAGO_PAGE_SIZE_MICRONS,
     printBackground: true,
   });
 }
