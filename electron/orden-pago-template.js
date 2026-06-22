@@ -18,7 +18,6 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-/** Orden de pago solo necesita la fecha, no el lugar. */
 function formatMontoDisplay(monto) {
   const cleaned = String(monto ?? '').replace(/,/g, '').trim();
   if (!cleaned) return '';
@@ -30,32 +29,17 @@ function formatMontoDisplay(monto) {
   });
 }
 
-function extractFechaSolo(fechaCompleta) {
-  const s = String(fechaCompleta ?? '').trim();
-  if (!s) return '';
+const LUGAR_FECHA_FIELD_LEFT = 620;
+const UNIDAD_EJECUTORA_LEFT = 1100;
+const LUGAR_FECHA_FIELD_MAX_WIDTH =
+  UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - 16;
 
-  const afterLastComma = s.match(/,\s*([^,]+)$/);
-  if (afterLastComma) {
-    const candidate = afterLastComma[1].trim();
-    if (/\d{1,2}\s+de\s+/i.test(candidate)) return candidate;
-  }
+function getLugarFechaFontSize(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return 44;
 
-  const inline = s.match(/\d{1,2}\s+de\s+[\p{L}\s]+\s+de\s+\d{4}/iu);
-  if (inline) return inline[0].trim();
-
-  return s;
-}
-
-/** Espacio hasta UNIDAD EJECUTORA (876px) menos margen. */
-const FECHA_FIELD_LEFT = 399;
-const FECHA_FIELD_MAX_WIDTH = 470;
-
-function getFechaFontSize(fecha) {
-  const text = String(fecha ?? '').trim();
-  if (!text) return 44;
-
-  const size = Math.floor(FECHA_FIELD_MAX_WIDTH / (text.length * 0.52));
-  return Math.max(30, Math.min(44, size));
+  const size = Math.floor(LUGAR_FECHA_FIELD_MAX_WIDTH / (value.length * 0.52));
+  return Math.max(22, Math.min(44, size));
 }
 
 function getLayout() {
@@ -149,20 +133,20 @@ function buildMontoLetrasDiv(content) {
 }
 
 function buildOrdenPagoHtml(data) {
-  const fecha = extractFechaSolo(data.fecha);
+  const lugarFecha = String(data.fecha ?? '').trim();
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
   const monto = formatMontoDisplay(data.monto);
 
   const fields = [
     buildFieldDiv(
-      'orden-fecha',
+      'orden-lugar-fecha',
       fieldStyle(
-        FECHA_FIELD_LEFT,
+        LUGAR_FECHA_FIELD_LEFT,
         543,
-        `font-size:${getFechaFontSize(fecha)}px;max-width:${FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
+        `font-size:${getLugarFechaFontSize(lugarFecha)}px;max-width:${LUGAR_FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
       ),
-      fecha
+      lugarFecha
     ),
     buildFieldDiv(
       'orden-beneficiario',
@@ -308,6 +292,5 @@ function buildOrdenPagoHtml(data) {
 
 module.exports = {
   buildOrdenPagoHtml,
-  extractFechaSolo,
   SCALE,
 };
