@@ -31,6 +31,9 @@ import {
   setMontoLetras,
   setSelectedProvider,
 } from "@/store/slices/emissionDraftSlice"
+import PrintPrinterModal, {
+  type PrintDocumentKind,
+} from "@/components/emission/PrintPrinterModal"
 import {
   DESCRIPCION_MAX_LENGTH,
   DETALLE_GASTO_MAX_LENGTH,
@@ -56,7 +59,10 @@ export default function EmissionPage() {
   const [printSuccess, setPrintSuccess] = useState("")
   const [printError, setPrintError] = useState("")
   const [printing, setPrinting] = useState(false)
-  const [printingType, setPrintingType] = useState("")
+  const [printModalOpen, setPrintModalOpen] = useState(false)
+  const [printModalSession, setPrintModalSession] = useState(0)
+  const [pendingPrintKind, setPendingPrintKind] =
+    useState<PrintDocumentKind | null>(null)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -200,63 +206,26 @@ export default function EmissionPage() {
 
   const beneficiario = selectedProvider?.nombre_razon ?? ""
 
-  const handlePrintOrden = async () => {
+  const openPrintModal = (kind: PrintDocumentKind) => {
     if (!validateChequeForm()) return
-
-    setPrinting(true)
-    setPrintingType("ORDEN")
     setPrintError("")
     setPrintSuccess("")
-
-    try {
-      const api = getAppApi()
-      const configRes = await api.config.getSettings()
-      const cfg = configRes.success ? configRes.data : settings
-      const printerName = cfg?.printer_name || "Microsoft Print to PDF"
-
-      const payload = buildPrintPayload()
-
-      const offsets = {
-        fecha_x: 0,
-        fecha_y: 0,
-        monto_x: 0,
-        monto_y: 0,
-        beneficiario_x: 0,
-        beneficiario_y: 0,
-        letras_x: 0,
-        letras_y: 0,
-      }
-
-      // Orden de pago usa plantilla HTML completa → impresión gráfica
-      const result = await api.print.graphical(
-        "ORDEN_PAGO",
-        payload,
-        offsets
-      )
-
-      if (result.success) {
-        setPrintSuccess(
-          `Orden de Pago enviada a "${printerName}" correctamente.`
-        )
-      } else {
-        setPrintError(
-          `Error al imprimir Orden de Pago: ${result.error || "Verifique la impresora."}`
-        )
-      }
-    } catch (err) {
-      console.error(err)
-      setPrintError("Excepción al procesar la impresión de Orden de Pago.")
-    } finally {
-      setPrinting(false)
-      setPrintingType("")
-    }
+    setPendingPrintKind(kind)
+    setPrintModalSession((session) => session + 1)
+    setPrintModalOpen(true)
   }
 
-  const handlePrintCheque = async () => {
-    if (!validateChequeForm()) return
+  const closePrintModal = () => {
+    if (printing) return
+    setPrintModalOpen(false)
+    setPendingPrintKind(null)
+    setPrintError("")
+  }
+
+  const handleConfirmPrint = async (printerName: string) => {
+    if (!pendingPrintKind || !printerName.trim()) return
 
     setPrinting(true)
-    setPrintingType("CHEQUE")
     setPrintError("")
     setPrintSuccess("")
 
@@ -264,7 +233,40 @@ export default function EmissionPage() {
       const api = getAppApi()
       const configRes = await api.config.getSettings()
       const cfg = configRes.success ? configRes.data : settings
-      const printerName = cfg?.printer_name || "Microsoft Print to PDF"
+      const payload = buildPrintPayload()
+
+      if (pendingPrintKind === "ORDEN") {
+        const offsets = {
+          fecha_x: 0,
+          fecha_y: 0,
+          monto_x: 0,
+          monto_y: 0,
+          beneficiario_x: 0,
+          beneficiario_y: 0,
+          letras_x: 0,
+          letras_y: 0,
+        }
+
+        const result = await api.print.graphical(
+          printerName,
+          "ORDEN_PAGO",
+          payload,
+          offsets
+        )
+
+        if (result.success) {
+          setPrintSuccess(
+            `Orden de Pago enviada a "${printerName}" correctamente.`
+          )
+          setPrintModalOpen(false)
+          setPendingPrintKind(null)
+        } else {
+          setPrintError(
+            result.error || "Verifique la impresora."
+          )
+        }
+        return
+      }
 
       const offsets = {
         fecha_x: parseInt(cfg?.offset_cheque_fecha_x || "0"),
@@ -277,8 +279,6 @@ export default function EmissionPage() {
         letras_y: parseInt(cfg?.offset_cheque_letras_y || "0"),
       }
 
-      const payload = buildPrintPayload()
-
       const result = await api.print.nativeEscP(
         printerName,
         "CHEQUE",
@@ -290,17 +290,22 @@ export default function EmissionPage() {
         setPrintSuccess(
           `Cheque enviado a "${printerName}" (Epson LX-350) correctamente.`
         )
+        setPrintModalOpen(false)
+        setPendingPrintKind(null)
       } else {
         setPrintError(
-          `Error al imprimir Cheque: ${result.error || "Verifique la impresora LX-350."}`
+          result.error || "Verifique la impresora LX-350."
         )
       }
     } catch (err) {
       console.error(err)
-      setPrintError("Excepción al procesar la impresión del Cheque.")
+      setPrintError(
+        pendingPrintKind === "ORDEN"
+          ? "No se pudo completar la impresión de la Orden de Pago."
+          : "No se pudo completar la impresión del Cheque."
+      )
     } finally {
       setPrinting(false)
-      setPrintingType("")
     }
   }
 
@@ -312,7 +317,7 @@ export default function EmissionPage() {
           <span style={{ fontWeight: 600 }}>{printSuccess}</span>
         </div>
       )}
-      {printError && (
+      {printError && !printModalOpen && (
         <div className="alert alert-danger">
           <AlertCircle size={16} />
           <span style={{ fontWeight: 600 }}>{printError}</span>
@@ -605,44 +610,46 @@ export default function EmissionPage() {
                 <button
                   type="button"
                   className="btn btn-primary btn-lg"
-                  onClick={handlePrintOrden}
+                  onClick={() => openPrintModal("ORDEN")}
                   disabled={printing || !isChequeFormComplete}
                   id="btn-imprimir-orden"
                 >
                   <FileText size={17} />
-                  {printing && printingType === "ORDEN"
-                    ? "Enviando..."
-                    : "Imprimir Orden de Pago"}
+                  Imprimir Orden de Pago
                 </button>
 
                 <button
                   type="button"
                   className="btn btn-sky btn-lg"
-                  onClick={handlePrintCheque}
+                  onClick={() => openPrintModal("CHEQUE")}
                   disabled={printing || !isChequeFormComplete}
                   id="btn-imprimir-cheque"
                 >
                   <CreditCard size={17} />
-                  {printing && printingType === "CHEQUE"
-                    ? "Enviando..."
-                    : "Imprimir Cheque"}
+                  Imprimir Cheque
                 </button>
               </div>
 
-              {settings && (
-                <p className="emission-printer-info">
-                  Impresora activa:{" "}
-                  <strong>{settings.printer_name || "No configurada"}</strong>
-                  &nbsp;·&nbsp; Cheque:{" "}
-                  <strong>ESC/P (LX-350)</strong>
-                  &nbsp;·&nbsp; Orden de Pago:{" "}
-                  <strong>Gráfico Windows</strong>
-                </p>
-              )}
+              <p className="emission-printer-info">
+                Cheque: <strong>ESC/P (LX-350)</strong>
+                &nbsp;·&nbsp; Orden de Pago:{" "}
+                <strong>Gráfico Windows</strong>
+                &nbsp;·&nbsp; La impresora se elige al imprimir
+              </p>
             </div>
           </div>
         </div>
       </div>
+
+      <PrintPrinterModal
+        open={printModalOpen}
+        documentKind={pendingPrintKind}
+        sessionKey={printModalSession}
+        loading={printing}
+        error={printError}
+        onConfirm={handleConfirmPrint}
+        onClose={closePrintModal}
+      />
     </div>
   )
 }

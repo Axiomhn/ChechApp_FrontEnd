@@ -94,13 +94,14 @@ function registerIpcHandlers() {
 
   ipcMain.handle(
     'print:graphical',
-    async (_event, { documentType, data, offsets }) => {
+    async (_event, { printerName, documentType, data, offsets }) => {
       try {
         return await printGraphical(
           app.getPath('userData'),
           documentType,
           data,
-          offsets
+          offsets,
+          printerName
         );
       } catch (err) {
         console.error('print:graphical', err);

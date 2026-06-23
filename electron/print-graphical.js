@@ -12,11 +12,6 @@ function destroyPrintWindow() {
   printWindow = null;
 }
 
-function resolvePrinterName(userDataPath, fallback = '') {
-  const settings = loadSettings(userDataPath);
-  return settings.printer_name?.trim() || fallback || undefined;
-}
-
 function printHtmlDocument({ html, deviceName, pageSize, printBackground = true }) {
   return new Promise((resolve) => {
     destroyPrintWindow();
@@ -74,62 +69,59 @@ function printHtmlDocument({ html, deviceName, pageSize, printBackground = true 
   });
 }
 
-async function printOrdenPago(userDataPath, data) {
-  // Orden de pago: plantilla con tipografía y escala fijas. Ignora fuente_tamano del cheque.
+async function printOrdenPago(data, deviceName) {
   const html = buildOrdenPagoHtml(data);
-  const deviceName = resolvePrinterName(
-    userDataPath,
-    'Microsoft Print to PDF'
-  );
+  const printer = String(deviceName ?? '').trim();
 
-  if (!deviceName) {
+  if (!printer) {
     return {
       success: false,
-      error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+      error: 'No hay impresora seleccionada.',
     };
   }
 
   return printHtmlDocument({
     html,
-    deviceName,
+    deviceName: printer,
     pageSize: ORDEN_PAGO_PAGE_SIZE_MICRONS,
     printBackground: true,
   });
 }
 
-async function printCheque(userDataPath, data, offsets = {}) {
+async function printCheque(userDataPath, data, offsets = {}, deviceName = '') {
   const settings = loadSettings(userDataPath);
   const fuenteTamano = parseInt(settings.fuente_tamano || '12', 10);
   const html = buildChequeHtml({ data, offsets, fuenteTamano });
-  const deviceName = resolvePrinterName(
-    userDataPath,
-    'Microsoft Print to PDF'
-  );
+  const printer = String(deviceName ?? '').trim();
 
-  if (!deviceName) {
+  if (!printer) {
     return {
       success: false,
-      error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+      error: 'No hay impresora seleccionada.',
     };
   }
 
   return printHtmlDocument({
     html,
-    deviceName,
+    deviceName: printer,
     pageSize: CHEQUE_PAGE_SIZE_MICRONS,
     printBackground: false,
   });
 }
 
-async function printGraphical(userDataPath, documentType, data, offsets = {}) {
+async function printGraphical(
+  userDataPath,
+  documentType,
+  data,
+  offsets = {},
+  printerName = ''
+) {
   if (documentType === 'ORDEN_PAGO') {
-    return printOrdenPago(userDataPath, data);
+    return printOrdenPago(data, printerName);
   }
 
   if (documentType === 'CHEQUE') {
-    return printCheque(userDataPath, data, offsets);
+    return printCheque(userDataPath, data, offsets, printerName);
   }
 
   return {

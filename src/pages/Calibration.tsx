@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import {
   Save,
-  Printer,
   Sliders,
   CheckCircle2,
   RotateCcw,
@@ -14,12 +13,10 @@ import type { AppSettings } from "@/types/electron"
 import {
   defaultCalibrationSettings,
   type CalibrationSettings,
-  type PrinterInfo,
 } from "@/types/calibration"
 
 function mapApiSettings(data: AppSettings): CalibrationSettings {
   return {
-    printer_name: data.printer_name || "",
     offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
     offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
     offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
@@ -61,7 +58,6 @@ function withResetOffsets(settings: CalibrationSettings): CalibrationSettings {
 }
 
 export default function CalibrationPage() {
-  const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState("")
   const [settings, setSettings] = useState<CalibrationSettings>(
@@ -71,12 +67,10 @@ export default function CalibrationPage() {
 
   useEffect(() => {
     let active = true
-    const api = getAppApi()
-
-    Promise.all([api.config.getPrinters(), api.config.getSettings()])
-      .then(([printerList, res]) => {
+    getAppApi()
+      .config.getSettings()
+      .then((res) => {
         if (!active) return
-        setPrinters(printerList || [])
         if (res.success && res.data) {
           setSettings(mapApiSettings(res.data))
         }
@@ -172,43 +166,6 @@ export default function CalibrationPage() {
 
       <div className="calibration-grid">
         <div className="calibration-sidebar">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-icon">
-                <Printer size={17} />
-              </div>
-              <div>
-                <div className="card-title">Dispositivo de Impresión</div>
-                <div className="card-subtitle">
-                  Impresora activa del sistema Windows
-                </div>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="select-impresora">Impresora Activa</label>
-                <select
-                  id="select-impresora"
-                  value={settings.printer_name}
-                  onChange={(e) =>
-                    setSettings({ ...settings, printer_name: e.target.value })
-                  }
-                >
-                  <option value="">-- Seleccionar Impresora --</option>
-                  {printers.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                      {p.isDefault ? " ★ (Predeterminada)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <span className="calibration-field-hint">
-                  Impresoras detectadas por Windows en esta máquina.
-                </span>
-              </div>
-            </div>
-          </div>
-
           <div className="card">
             <div className="card-header">
               <div className="card-header-icon">

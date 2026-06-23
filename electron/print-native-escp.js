@@ -87,7 +87,7 @@ async function printNativeEscP(printerName, documentType, data, offsets = {}) {
     return {
       success: false,
       error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+        'No hay impresora seleccionada. Elija una impresora en el diálogo de impresión.',
     };
   }
 

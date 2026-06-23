@@ -9,7 +9,12 @@ contextBridge.exposeInMainWorld('api', {
   print: {
     nativeEscP: (printerName, documentType, data, offsets) =>
       ipcRenderer.invoke('print:native-escp', { printerName, documentType, data, offsets }),
-    graphical: (documentType, data, offsets) =>
-      ipcRenderer.invoke('print:graphical', { documentType, data, offsets }),
+    graphical: (printerName, documentType, data, offsets) =>
+      ipcRenderer.invoke('print:graphical', {
+        printerName,
+        documentType,
+        data,
+        offsets,
+      }),
   },
 });

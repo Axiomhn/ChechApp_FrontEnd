@@ -1279,6 +1279,36 @@
   color: #0D3B66;
 }
 
+.print-printer-modal {
+  width: min(480px, calc(100vw - 32px));
+}
+
+.print-printer-modal-doc {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #2C3E50;
+}
+
+.print-printer-modal-hint {
+  margin: 0 0 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #6B7C93;
+}
+
+.print-printer-modal-field {
+  margin-bottom: 0;
+}
+
+.print-printer-modal-alert {
+  margin-top: 14px;
+  margin-bottom: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+}
+
 /* ── Calibration ── */
 .app-shell .calibration-page {
   display: flex;
