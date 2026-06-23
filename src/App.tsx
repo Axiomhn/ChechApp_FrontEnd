@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom"
 import DesignSystemPage from "@/pages/DesignSystem"
 import LoginPage from "@/pages/Login"
-import DashboardPage from "@/pages/Dashboard"
+import EmissionPage from "@/pages/Emission"
+import ProvidersPage from "@/pages/Providers"
+import CalibrationPage from "@/pages/Calibration"
 import AuthGuard from "@/components/auth/AuthGuard"
 import MainLayout from "@/components/layout/MainLayout"
 
@@ -15,7 +17,10 @@ function App() {
       {/* Protected Routes */}
       <Route element={<AuthGuard />}>
         <Route element={<MainLayout />}>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<Navigate to="/emission" replace />} />
+          <Route path="/emission" element={<EmissionPage />} />
+          <Route path="/providers" element={<ProvidersPage />} />
+          <Route path="/calibration" element={<CalibrationPage />} />
         </Route>
       </Route>
 

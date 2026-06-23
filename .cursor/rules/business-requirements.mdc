@@ -1,0 +1,134 @@
+---
+description: Requerimientos funcionales de UMASENY — Chech App (frontend)
+alwaysApply: true
+---
+
+# Requerimientos de negocio — Chech App Frontend
+
+Sistema de emisión de cheques y órdenes de pago para **UMASENY** (Unidad Desconcentrada Municipal de Agua y Saneamiento, El Negrito, Yoro). Usuario: **Operador permanente de la Junta de Agua**.
+
+Al implementar nuevas features, verificar que cumplan estos criterios. Eliminar mocks (`app-api.ts`) cuando exista el endpoint real equivalente.
+
+## Módulos y rutas
+
+| Módulo | Ruta | Página |
+|--------|------|--------|
+| Login | `/login` | `Login.tsx` |
+| Emisión (Home) | `/emission` | `Emission.tsx` |
+| Proveedores | `/providers` | `Providers.tsx` |
+| Ajuste fino | `/calibration` | `Calibration.tsx` |
+
+---
+
+## 1. Login
+
+**Historia:** Como Operador permanente de la Junta de Agua, quiero ingresar mis credenciales en una pantalla inicial.
+
+**Criterios de aceptación:**
+
+- Acceso con **un solo usuario** (monousuario); credenciales vía API (`POST /auth/login`).
+- **Sin recuperación de contraseña** ni registro de usuarios en UI.
+- Si falla el login, indicar **qué campo está mal de forma individual** (usuario vs. contraseña), no un mensaje genérico ambiguo.
+- Tras login exitoso → redirigir a `/emission`.
+- Sesión: JWT (access + refresh) en Redux Persist; logout llama `POST /auth/logout`.
+
+**UI:** Dos paneles (identidad UMASENY + formulario). Branding **UMASENY**, no "Chech App".
+
+---
+
+## 2. Home — Emisión de egresos (`/emission`)
+
+**Historia:** Como Operador, quiero buscar un proveedor, digitar el monto y visualizar los datos unificados antes de imprimir.
+
+**Criterios de aceptación:**
+
+### Buscador predictivo (beneficiario)
+
+- Campo beneficiario con **autocompletado** al escribir.
+- Filtrar por **Nombre** o **RTN** del proveedor (catálogo local/API).
+- Al seleccionar un ítem del listado, completar el beneficiario.
+
+### Monto y conversión
+
+- Al digitar el monto numérico (ej. `25300` → formato `L. 25,300.00`), **autogenerar de inmediato** el texto en letras (ej. *"Veinticinco Mil Trescientos Lempiras Exactos"*).
+- Usar `numberToLetters` en `src/lib/numberToLetters.ts`.
+
+### Impresión
+
+- **Dos botones** debajo de los campos:
+  1. **Imprimir cheque**
+  2. **Imprimir Orden de Pago**
+- Los mismos datos del formulario alimentan ambos documentos.
+- **Cheque:** aplicar offsets de posición y tamaño de fuente configurados en Ajuste fino (vía Electron/impresora matricial).
+- **Orden de Pago (papel Carta):** **ignorar por completo** offsets y tamaño de fuente del cheque; usar **plantilla fija** que calce con el PDF/imagen de referencia.
+
+### Validaciones antes de imprimir
+
+- Beneficiario obligatorio.
+- Monto numérico válido y mayor a cero.
+
+---
+
+## 3. Proveedores — CRUD (`/providers`)
+
+**Historia:** Como Operador, quiero administrar un catálogo de proveedores con Nombre, RTN y Teléfono.
+
+**Criterios de aceptación:**
+
+- Pantalla independiente con **tabla** de proveedores guardados.
+- **Buscar/filtrar** en la lista por nombre o RTN.
+- **Agregar** proveedor: formulario modal con validaciones.
+- **Editar** cualquiera de los tres campos de un proveedor existente.
+- **Eliminar** permanentemente (confirmación antes de borrar).
+- Campos del proveedor:
+  - **Nombre / Razón social** — obligatorio.
+  - **RTN** — opcional en UI pero campo presente.
+  - **Teléfono** — opcional en UI pero campo presente.
+- Nombre único: no permitir duplicados (error claro si el backend rechaza UNIQUE).
+
+---
+
+## 4. Ajuste fino — Calibración (`/calibration`)
+
+**Historia:** Como Operador, quiero ajustar coordenadas de los campos del cheque de forma individual y el tamaño de letra de forma global.
+
+**Criterios de aceptación:**
+
+### Coordenadas individuales (solo cheque)
+
+Controles numéricos incrementales (mm o píxeles) para ejes **X** (horizontal) e **Y** (vertical), **independientes por campo**:
+
+| Campo en UI | Uso en cheque |
+|-------------|---------------|
+| Lugar y Fecha | Fecha / lugar del documento |
+| Páguese a la orden de | Beneficiario |
+| Cantidad en letras | Monto en letras |
+| Cantidad en números (L.) | Monto numérico |
+
+- Botón para **restablecer offsets a cero** (con confirmación).
+- Guardar configuración en persistencia (API/Electron).
+
+### Tipografía global del cheque
+
+- Selector de **tamaño de fuente** (rango orientativo: 10pt–14pt; puede extenderse en UI).
+- El cambio afecta **todos los campos del cheque a la vez** (acople a cinta de impresora matricial Epson LX-350).
+
+### Impresora
+
+- Selector de impresora instalada en el sistema (vía Electron).
+- Método de impresión configurable (`graphical` / matricial según implementación).
+
+### Alcance de los ajustes
+
+- Estos ajustes aplican **solo al cheque**.
+- La **Orden de Pago** no usa estos offsets ni este tamaño de fuente.
+
+---
+
+## Restricciones técnicas del frontend
+
+- App **Electron** offline-first en operación; API backend en `VITE_API_URL`.
+- Impresión real requiere **proceso main de Electron** (IPC); no implementar impresión solo en browser.
+- Reemplazar `src/lib/app-api.ts` (mocks) por hooks en `src/api/` cuando existan endpoints reales.
+- Textos de UI en **español**.
+- Usar `ConfirmModal` en lugar de `window.confirm` para acciones destructivas o cierre de sesión.
