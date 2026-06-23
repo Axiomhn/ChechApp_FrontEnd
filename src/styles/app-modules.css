@@ -1339,17 +1339,11 @@
   gap: 10px;
 }
 
-.app-shell .calibration-grid {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.app-shell .calibration-sidebar {
+.app-shell .calibration-stack {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  max-width: 960px;
 }
 
 .app-shell .calibration-field-hint {

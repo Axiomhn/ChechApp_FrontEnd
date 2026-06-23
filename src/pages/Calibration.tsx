@@ -164,85 +164,7 @@ export default function CalibrationPage() {
         </div>
       )}
 
-      <div className="calibration-grid">
-        <div className="calibration-sidebar">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-icon">
-                <Sliders size={17} />
-              </div>
-              <div>
-                <div className="card-title">Tamaño de Letra Global</div>
-                <div className="card-subtitle">
-                  Solo aplica al cheque impreso (no afecta la Orden de Pago)
-                </div>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="form-group calibration-form-group-last">
-                <label htmlFor="select-fuente">Tamaño de Fuente (puntos)</label>
-                <div className="calibration-font-row">
-                  <select
-                    id="select-fuente"
-                    value={settings.fuente_tamano}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        fuente_tamano: parseInt(e.target.value),
-                      })
-                    }
-                    className="calibration-font-select"
-                  >
-                    {FONT_SIZE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s} pt
-                      </option>
-                    ))}
-                  </select>
-                  <div
-                    className="calibration-font-preview"
-                    style={{
-                      fontSize: `${Math.min(settings.fuente_tamano, 18)}px`,
-                    }}
-                  >
-                    Aa
-                  </div>
-                </div>
-              </div>
-
-              <div className="calibration-range-wrap">
-                <input
-                  type="range"
-                  min={FONT_SIZE_MIN}
-                  max={FONT_SIZE_MAX}
-                  step="1"
-                  value={settings.fuente_tamano}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      fuente_tamano: parseInt(e.target.value),
-                    })
-                  }
-                  className="calibration-range"
-                />
-                <div className="calibration-range-labels">
-                  <span>8 pt (pequeño)</span>
-                  <span>20 pt (grande)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="alert alert-info calibration-alert-last">
-            <Info size={15} />
-            <div className="calibration-info-text">
-              Los offsets del cheque se miden en <strong>columnas (X)</strong> y{" "}
-              <strong>líneas de papel (Y)</strong> para impresión ESC/P en la
-              LX-350.
-            </div>
-          </div>
-        </div>
-
+      <div className="calibration-stack">
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon">
@@ -318,6 +240,82 @@ export default function CalibrationPage() {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-header-icon">
+              <Sliders size={17} />
+            </div>
+            <div>
+              <div className="card-title">Tamaño de Letra Global</div>
+              <div className="card-subtitle">
+                Solo aplica al cheque impreso (no afecta la Orden de Pago)
+              </div>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="form-group calibration-form-group-last">
+              <label htmlFor="select-fuente">Tamaño de Fuente (puntos)</label>
+              <div className="calibration-font-row">
+                <select
+                  id="select-fuente"
+                  value={settings.fuente_tamano}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      fuente_tamano: parseInt(e.target.value),
+                    })
+                  }
+                  className="calibration-font-select"
+                >
+                  {FONT_SIZE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s} pt
+                    </option>
+                  ))}
+                </select>
+                <div
+                  className="calibration-font-preview"
+                  style={{
+                    fontSize: `${Math.min(settings.fuente_tamano, 18)}px`,
+                  }}
+                >
+                  Aa
+                </div>
+              </div>
+            </div>
+
+            <div className="calibration-range-wrap">
+              <input
+                type="range"
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                step="1"
+                value={settings.fuente_tamano}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    fuente_tamano: parseInt(e.target.value),
+                  })
+                }
+                className="calibration-range"
+              />
+              <div className="calibration-range-labels">
+                <span>8 pt (pequeño)</span>
+                <span>20 pt (grande)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="alert alert-info calibration-alert-last">
+          <Info size={15} />
+          <div className="calibration-info-text">
+            Los offsets del cheque se miden en <strong>columnas (X)</strong> y{" "}
+            <strong>líneas de papel (Y)</strong> para impresión ESC/P en la
+            LX-350.
           </div>
         </div>
       </div>
