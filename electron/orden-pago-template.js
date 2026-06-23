@@ -70,13 +70,55 @@ function buildFieldDiv(className, style, content) {
   return `<div class="orden-field ${className}" style="${style}">${escapeHtml(content)}</div>`;
 }
 
+const CONTENT_RIGHT = 2356;
+const ROW_807_TOP = 807;
+const ROW_807_LEFT = 156;
+const AFECTANDO_BLOCK_LEFT = 1520;
+const L_PAREN_BLOCK_WIDTH = 480;
+const L_AFECTANDO_GAP = 40;
+const L_PAREN_SHIFT_RIGHT = 35;
+const L_PAREN_BLOCK_LEFT =
+  AFECTANDO_BLOCK_LEFT - L_AFECTANDO_GAP - L_PAREN_BLOCK_WIDTH + L_PAREN_SHIFT_RIGHT;
+const ROW_807_SECTION_GAP = 16;
+const ROW_807_UNDERSCORE_WIDTH =
+  L_PAREN_BLOCK_LEFT - ROW_807_LEFT - ROW_807_SECTION_GAP;
+
 const MONTO_LETRAS_LINE1_LEFT = 552;
 const MONTO_LETRAS_LINE1_WIDTH = 1694;
-const MONTO_LETRAS_LINE2_LEFT = 156;
-const MONTO_LETRAS_LINE2_WIDTH = 2090;
+const MONTO_LETRAS_LINE2_LEFT = ROW_807_LEFT;
+const MONTO_LETRAS_LINE2_WIDTH = ROW_807_UNDERSCORE_WIDTH;
 const MONTO_LETRAS_ROW1_TOP = 719;
 const MONTO_LETRAS_ROW2_TOP = 801;
 const MONTO_LETRAS_LINE1_MAX_CHARS = 68;
+const MONTO_NUMERIC_LEFT = L_PAREN_BLOCK_LEFT + 82;
+const MONTO_NUMERIC_ROW_TOP = ROW_807_TOP;
+const MONTO_NUMERIC_WIDTH = 220;
+
+const ROW_807_STATIC_MARKER = '<!-- ORDEN_ROW_807_STATIC -->';
+
+function buildRow807StaticHtml() {
+  const underscoreCount = Math.max(19, Math.ceil(ROW_807_UNDERSCORE_WIDTH / 26));
+  const underscores = '_'.repeat(underscoreCount);
+  const rowStyle = [
+    'position:absolute',
+    'color:black',
+    'font-size:55px',
+    "font-family:'Alexandria',Arial,sans-serif",
+    'font-weight:400',
+    'white-space:nowrap',
+    'box-sizing:border-box',
+  ].join(';');
+
+  return [
+    `<div style="left:${ROW_807_LEFT}px;top:${ROW_807_TOP}px;width:${ROW_807_UNDERSCORE_WIDTH}px;overflow:hidden;${rowStyle}">${underscores}</div>`,
+    `<div style="left:${L_PAREN_BLOCK_LEFT}px;top:${ROW_807_TOP}px;${rowStyle}">(L._____________)</div>`,
+    `<div style="left:${AFECTANDO_BLOCK_LEFT}px;top:${ROW_807_TOP}px;${rowStyle}">AFECTANDO LO SIGUIENTE:</div>`,
+  ].join('\n    ');
+}
+
+function injectRow807Static(layout) {
+  return layout.replace(ROW_807_STATIC_MARKER, buildRow807StaticHtml());
+}
 
 function splitMontoLetras(text) {
   const value = String(text ?? '').trim();
@@ -252,9 +294,9 @@ function buildOrdenPagoHtml(data) {
     buildFieldDiv(
       'orden-monto',
       fieldStyle(
-        855,
-        807,
-        'font-size:48px;width:200px;text-align:left;white-space:nowrap'
+        MONTO_NUMERIC_LEFT,
+        MONTO_NUMERIC_ROW_TOP,
+        `font-size:48px;width:${MONTO_NUMERIC_WIDTH}px;text-align:left;white-space:nowrap`
       ),
       monto
     ),
@@ -262,7 +304,7 @@ function buildOrdenPagoHtml(data) {
     .filter(Boolean)
     .join('\n    ');
 
-  const rawLayout = fillOrdenTables(getLayout().trim(), data);
+  const rawLayout = injectRow807Static(fillOrdenTables(getLayout().trim(), data));
   const insertAt = rawLayout.lastIndexOf('</div>');
   const layout =
     insertAt === -1
