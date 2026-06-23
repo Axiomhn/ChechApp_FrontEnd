@@ -90,6 +90,7 @@ const MONTO_LETRAS_LINE2_WIDTH = ROW_807_UNDERSCORE_WIDTH;
 const MONTO_LETRAS_ROW1_TOP = 719;
 const MONTO_LETRAS_ROW2_TOP = 801;
 const MONTO_LETRAS_FONT_SIZE = 42;
+const MONTO_LETRAS_FONT_SIZE_MIN = 22;
 const MONTO_LETRAS_WIDTH_SAFETY = 1.15;
 const MONTO_NUMERIC_LEFT = L_PAREN_BLOCK_LEFT + 82;
 const MONTO_NUMERIC_ROW_TOP = ROW_807_TOP;
@@ -139,6 +140,73 @@ function estimateMontoLetrasWidth(text, fontSize = MONTO_LETRAS_FONT_SIZE) {
   return width * MONTO_LETRAS_WIDTH_SAFETY;
 }
 
+function getMontoLetrasFontSize(text, maxWidth, maxSize = MONTO_LETRAS_FONT_SIZE) {
+  const value = String(text ?? '').trim();
+  if (!value) return maxSize;
+
+  const widthAtDefault = estimateMontoLetrasWidth(value, maxSize);
+  if (widthAtDefault <= maxWidth) {
+    return maxSize;
+  }
+
+  const scaled = Math.floor((maxSize * maxWidth) / widthAtDefault);
+  return Math.max(MONTO_LETRAS_FONT_SIZE_MIN, Math.min(maxSize, scaled));
+}
+
+function rebalanceMontoLetrasLines(
+  line1,
+  line2,
+  fontSize = MONTO_LETRAS_FONT_SIZE
+) {
+  if (!line2) return { line1, line2 };
+
+  const words1 = line1.split(/\s+/).filter(Boolean);
+  const words2 = line2.split(/\s+/).filter(Boolean);
+
+  while (words2.length > 1) {
+    const line2Text = words2.join(' ');
+    if (estimateMontoLetrasWidth(line2Text, fontSize) <= MONTO_LETRAS_LINE2_WIDTH) {
+      break;
+    }
+
+    const word = words2.shift();
+    const candidateLine1 = [...words1, word].join(' ');
+    if (estimateMontoLetrasWidth(candidateLine1, fontSize) > MONTO_LETRAS_LINE1_WIDTH) {
+      words2.unshift(word);
+      break;
+    }
+
+    words1.push(word);
+  }
+
+  return {
+    line1: words1.join(' '),
+    line2: words2.join(' '),
+  };
+}
+
+function montoLetrasLinesFitAtFont(line1, line2, fontSize) {
+  if (estimateMontoLetrasWidth(line1, fontSize) > MONTO_LETRAS_LINE1_WIDTH) {
+    return false;
+  }
+  if (!line2) {
+    return true;
+  }
+  return estimateMontoLetrasWidth(line2, fontSize) <= MONTO_LETRAS_LINE2_WIDTH;
+}
+
+function buildMontoLetrasLineExtra(text, maxWidth, widthPx, fontSize) {
+  const resolvedFontSize =
+    fontSize ?? getMontoLetrasFontSize(text, maxWidth);
+  return [
+    `font-size:${resolvedFontSize}px`,
+    'line-height:1.15',
+    'white-space:nowrap',
+    'overflow:visible',
+    `width:${widthPx}px`,
+  ].join(';');
+}
+
 function splitMontoLetrasByWidth(text, maxWidth, fontSize = MONTO_LETRAS_FONT_SIZE) {
   const value = String(text ?? '').trim();
   if (!value) return { line1: '', line2: '' };
@@ -167,40 +235,56 @@ function splitMontoLetrasByWidth(text, maxWidth, fontSize = MONTO_LETRAS_FONT_SI
   return { line1, line2 };
 }
 
-function splitMontoLetras(text) {
-  const value = String(text ?? '').trim();
-  if (!value) return { line1: '', line2: '' };
+function splitMontoLetrasContent(value, fontSize = MONTO_LETRAS_FONT_SIZE) {
+  const text = String(value ?? '').trim();
+  if (!text) return { line1: '', line2: '' };
 
-  const centsMatch = value.match(/^(.+?)\s+(CON\s+\d{2}\/100)$/i);
+  const centsMatch = text.match(/^(.+?)\s+(CON\s+\d{2}\/100)$/i);
   if (!centsMatch) {
-    return splitMontoLetrasByWidth(value, MONTO_LETRAS_LINE1_WIDTH);
+    const split = splitMontoLetrasByWidth(text, MONTO_LETRAS_LINE1_WIDTH, fontSize);
+    return rebalanceMontoLetrasLines(split.line1, split.line2, fontSize);
   }
 
   const main = centsMatch[1].trim();
   const suffix = centsMatch[2].trim();
 
-  if (estimateMontoLetrasWidth(value) <= MONTO_LETRAS_LINE1_WIDTH) {
-    return { line1: value, line2: '' };
+  if (estimateMontoLetrasWidth(text, fontSize) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return { line1: text, line2: '' };
   }
 
-  if (estimateMontoLetrasWidth(main) <= MONTO_LETRAS_LINE1_WIDTH) {
-    return { line1: main, line2: suffix };
+  if (estimateMontoLetrasWidth(main, fontSize) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return rebalanceMontoLetrasLines(main, suffix, fontSize);
   }
 
-  const { line1, line2 } = splitMontoLetrasByWidth(main, MONTO_LETRAS_LINE1_WIDTH);
-  return {
+  const { line1, line2 } = splitMontoLetrasByWidth(main, MONTO_LETRAS_LINE1_WIDTH, fontSize);
+  return rebalanceMontoLetrasLines(
     line1,
-    line2: line2 ? `${line2} ${suffix}` : suffix,
-  };
+    line2 ? `${line2} ${suffix}` : suffix,
+    fontSize
+  );
+}
+
+function resolveMontoLetrasLayout(text) {
+  const value = String(text ?? '').trim();
+  if (!value) {
+    return { line1: '', line2: '', fontSize: MONTO_LETRAS_FONT_SIZE };
+  }
+
+  for (let fontSize = MONTO_LETRAS_FONT_SIZE; fontSize >= MONTO_LETRAS_FONT_SIZE_MIN; fontSize--) {
+    const { line1, line2 } = splitMontoLetrasContent(value, fontSize);
+    if (montoLetrasLinesFitAtFont(line1, line2, fontSize)) {
+      return { line1, line2, fontSize };
+    }
+  }
+
+  const { line1, line2 } = splitMontoLetrasContent(value, MONTO_LETRAS_FONT_SIZE_MIN);
+  return { line1, line2, fontSize: MONTO_LETRAS_FONT_SIZE_MIN };
 }
 
 /** Renglón 1 tras "LA SUMA DE :"; renglón 2 con ancho completo, en la 2ª línea del formulario. */
 function buildMontoLetrasDiv(content) {
-  const { line1, line2 } = splitMontoLetras(content);
+  const { line1, line2, fontSize } = resolveMontoLetrasLayout(content);
   if (!line1 && !line2) return '';
-
-  const lineStyle =
-    'font-size:42px;line-height:1.15;white-space:nowrap;overflow:visible';
 
   if (!line2) {
     return buildFieldDiv(
@@ -208,7 +292,12 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE1_LEFT,
         MONTO_LETRAS_ROW1_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line1,
+          MONTO_LETRAS_LINE1_WIDTH,
+          MONTO_LETRAS_LINE1_WIDTH,
+          fontSize
+        )
       ),
       line1
     );
@@ -220,7 +309,12 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE1_LEFT,
         MONTO_LETRAS_ROW1_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line1,
+          MONTO_LETRAS_LINE1_WIDTH,
+          MONTO_LETRAS_LINE1_WIDTH,
+          fontSize
+        )
       ),
       line1
     ),
@@ -229,7 +323,12 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE2_LEFT,
         MONTO_LETRAS_ROW2_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE2_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line2,
+          MONTO_LETRAS_LINE2_WIDTH,
+          MONTO_LETRAS_LINE2_WIDTH,
+          fontSize
+        )
       ),
       line2
     ),
