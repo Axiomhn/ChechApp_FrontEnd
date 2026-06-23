@@ -10,8 +10,8 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 
   const iconPath = app.isPackaged
-    ? path.join(__dirname, '../dist/icon.jpeg')
-    : path.join(__dirname, '../public/icon.jpeg');
+    ? path.join(__dirname, '../dist/icon.png')
+    : path.join(__dirname, '../public/icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1385,

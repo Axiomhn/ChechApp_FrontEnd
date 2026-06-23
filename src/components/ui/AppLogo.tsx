@@ -1,4 +1,4 @@
-const LOGO_SRC = `${import.meta.env.BASE_URL}icon.jpeg`
+const LOGO_SRC = `${import.meta.env.BASE_URL}icon.png`
 
 type AppLogoProps = {
   className?: string
