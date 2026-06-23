@@ -26,7 +26,7 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/icon.png"
+      "icon": "public/icon.jpeg"
     },
     "nsis": {
       "oneClick": false,
