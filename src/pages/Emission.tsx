@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
+import { useDispatch, useSelector } from "react-redux"
 import {
   Calendar,
   User,
@@ -21,37 +22,36 @@ import { numberToLetters } from "@/lib/numberToLetters"
 import { getAppApi } from "@/lib/app-api"
 import type { AppSettings } from "@/types/electron"
 import type { Provider } from "@/types/provider"
+import type { RootState } from "@/store"
 import {
-  createEmptyDescripciones,
-  createEmptyEstructura,
+  setDescripciones,
+  setEstructura,
+  setFecha,
+  setMonto,
+  setMontoLetras,
+  setSelectedProvider,
+} from "@/store/slices/emissionDraftSlice"
+import {
   DESCRIPCION_MAX_LENGTH,
   DETALLE_GASTO_MAX_LENGTH,
 } from "@/types/emission"
 
-function generateDefaultDate() {
-  const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-  ]
-  const d = new Date()
-  const dia = d.getDate().toString().padStart(2, "0")
-  const mes = meses[d.getMonth()]
-  const anio = d.getFullYear()
-  return `El Negrito, Yoro, ${dia} de ${mes} de ${anio}`
-}
-
 const PROVIDER_SEARCH_LIMIT = 50
 
 export default function EmissionPage() {
+  const dispatch = useDispatch()
+  const {
+    fecha,
+    monto,
+    montoLetras,
+    descripciones,
+    estructura,
+    selectedProvider,
+  } = useSelector((state: RootState) => state.emissionDraft)
+
   const [showDropdown, setShowDropdown] = useState(false)
   const [providerQuery, setProviderQuery] = useState("")
   const [debouncedProviderQuery, setDebouncedProviderQuery] = useState("")
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null)
-  const [fecha, setFecha] = useState(generateDefaultDate)
-  const [monto, setMonto] = useState("")
-  const [montoLetras, setMontoLetras] = useState("")
-  const [descripciones, setDescripciones] = useState(createEmptyDescripciones)
-  const [estructura, setEstructura] = useState(createEmptyEstructura)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [printSuccess, setPrintSuccess] = useState("")
   const [printError, setPrintError] = useState("")
@@ -105,12 +105,12 @@ export default function EmissionPage() {
 
   const handleMontoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatMontoInputWhileTyping(e.target.value)
-    setMonto(formatted)
+    dispatch(setMonto(formatted))
     const numeric = parseMontoInput(formatted)
     if (numeric !== null && numeric >= 0) {
-      setMontoLetras(numberToLetters(numeric))
+      dispatch(setMontoLetras(numberToLetters(numeric)))
     } else {
-      setMontoLetras("")
+      dispatch(setMontoLetras(""))
     }
   }
 
@@ -120,13 +120,13 @@ export default function EmissionPage() {
   }
 
   const selectProvider = (prov: Provider) => {
-    setSelectedProvider(prov)
+    dispatch(setSelectedProvider(prov))
     setProviderQuery("")
     setShowDropdown(false)
   }
 
   const clearSelectedProvider = () => {
-    setSelectedProvider(null)
+    dispatch(setSelectedProvider(null))
     setProviderQuery("")
     setShowDropdown(false)
     searchInputRef.current?.focus()
@@ -165,31 +165,25 @@ export default function EmissionPage() {
 
   const handleDescripcionChange = (index: number, value: string) => {
     const trimmed = value.slice(0, DESCRIPCION_MAX_LENGTH)
-    setDescripciones((prev) => {
-      const next = [...prev]
-      next[index] = trimmed
-      return next
-    })
+    const next = [...descripciones]
+    next[index] = trimmed
+    dispatch(setDescripciones(next))
   }
 
   const handleEstructuraDetalleChange = (index: number, value: string) => {
     const trimmed = value.slice(0, DETALLE_GASTO_MAX_LENGTH)
-    setEstructura((prev) => {
-      const next = [...prev]
-      next[index] = { ...next[index], detalle: trimmed }
-      return next
-    })
+    const next = [...estructura]
+    next[index] = { ...next[index], detalle: trimmed }
+    dispatch(setEstructura(next))
   }
 
   const handleEstructuraSubTotalChange = (index: number, value: string) => {
-    setEstructura((prev) => {
-      const next = [...prev]
-      next[index] = {
-        ...next[index],
-        subTotal: formatMontoInputWhileTyping(value),
-      }
-      return next
-    })
+    const next = [...estructura]
+    next[index] = {
+      ...next[index],
+      subTotal: formatMontoInputWhileTyping(value),
+    }
+    dispatch(setEstructura(next))
   }
 
   const buildPrintPayload = () => ({
@@ -351,7 +345,7 @@ export default function EmissionPage() {
                 id="fecha"
                 type="text"
                 value={fecha}
-                onChange={(e) => setFecha(e.target.value)}
+                onChange={(e) => dispatch(setFecha(e.target.value))}
                 placeholder="El Negrito, Yoro, 01 de Enero de 2026"
               />
             </div>
