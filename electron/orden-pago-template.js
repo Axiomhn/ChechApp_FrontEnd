@@ -89,7 +89,8 @@ const MONTO_LETRAS_LINE2_LEFT = ROW_807_LEFT;
 const MONTO_LETRAS_LINE2_WIDTH = ROW_807_UNDERSCORE_WIDTH;
 const MONTO_LETRAS_ROW1_TOP = 719;
 const MONTO_LETRAS_ROW2_TOP = 801;
-const MONTO_LETRAS_LINE1_MAX_CHARS = 68;
+const MONTO_LETRAS_FONT_SIZE = 42;
+const MONTO_LETRAS_WIDTH_SAFETY = 1.15;
 const MONTO_NUMERIC_LEFT = L_PAREN_BLOCK_LEFT + 82;
 const MONTO_NUMERIC_ROW_TOP = ROW_807_TOP;
 const MONTO_NUMERIC_WIDTH = 220;
@@ -120,19 +121,76 @@ function injectRow807Static(layout) {
   return layout.replace(ROW_807_STATIC_MARKER, buildRow807StaticHtml());
 }
 
-function splitMontoLetras(text) {
+function estimateMontoLetrasWidth(text, fontSize = MONTO_LETRAS_FONT_SIZE) {
+  let width = 0;
+  for (const ch of String(text)) {
+    if (ch === ' ') {
+      width += fontSize * 0.26;
+    } else if (ch === '/' || ch === '.') {
+      width += fontSize * 0.36;
+    } else if ('MWQG%'.includes(ch)) {
+      width += fontSize * 0.8;
+    } else if ('IL|!1'.includes(ch)) {
+      width += fontSize * 0.3;
+    } else {
+      width += fontSize * 0.62;
+    }
+  }
+  return width * MONTO_LETRAS_WIDTH_SAFETY;
+}
+
+function splitMontoLetrasByWidth(text, maxWidth, fontSize = MONTO_LETRAS_FONT_SIZE) {
   const value = String(text ?? '').trim();
   if (!value) return { line1: '', line2: '' };
-  if (value.length <= MONTO_LETRAS_LINE1_MAX_CHARS) {
+  if (estimateMontoLetrasWidth(value, fontSize) <= maxWidth) {
     return { line1: value, line2: '' };
   }
 
-  let splitAt = value.lastIndexOf(' ', MONTO_LETRAS_LINE1_MAX_CHARS);
-  if (splitAt <= 0) splitAt = MONTO_LETRAS_LINE1_MAX_CHARS;
+  const words = value.split(/\s+/);
+  const line1Words = [];
 
+  for (const word of words) {
+    const candidate = line1Words.length ? `${line1Words.join(' ')} ${word}` : word;
+    if (estimateMontoLetrasWidth(candidate, fontSize) <= maxWidth) {
+      line1Words.push(word);
+    } else {
+      break;
+    }
+  }
+
+  if (!line1Words.length) {
+    line1Words.push(words[0]);
+  }
+
+  const line1 = line1Words.join(' ');
+  const line2 = words.slice(line1Words.length).join(' ');
+  return { line1, line2 };
+}
+
+function splitMontoLetras(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return { line1: '', line2: '' };
+
+  const centsMatch = value.match(/^(.+?)\s+(CON\s+\d{2}\/100)$/i);
+  if (!centsMatch) {
+    return splitMontoLetrasByWidth(value, MONTO_LETRAS_LINE1_WIDTH);
+  }
+
+  const main = centsMatch[1].trim();
+  const suffix = centsMatch[2].trim();
+
+  if (estimateMontoLetrasWidth(value) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return { line1: value, line2: '' };
+  }
+
+  if (estimateMontoLetrasWidth(main) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return { line1: main, line2: suffix };
+  }
+
+  const { line1, line2 } = splitMontoLetrasByWidth(main, MONTO_LETRAS_LINE1_WIDTH);
   return {
-    line1: value.slice(0, splitAt).trim(),
-    line2: value.slice(splitAt).trim(),
+    line1,
+    line2: line2 ? `${line2} ${suffix}` : suffix,
   };
 }
 
@@ -142,7 +200,7 @@ function buildMontoLetrasDiv(content) {
   if (!line1 && !line2) return '';
 
   const lineStyle =
-    'font-size:42px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    'font-size:42px;line-height:1.15;white-space:nowrap;overflow:visible';
 
   if (!line2) {
     return buildFieldDiv(
@@ -345,8 +403,10 @@ function buildOrdenPagoHtml(data) {
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
-    .orden-letras {
-      overflow: hidden;
+    .orden-letras,
+    .orden-letras-l1,
+    .orden-letras-l2 {
+      overflow: visible;
     }
     .orden-tabla {
       border-collapse: collapse;
