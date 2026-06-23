@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import { useSelector } from "react-redux"
-import { Landmark, Users, Sliders, LogOut, Droplets } from "lucide-react"
+import { Landmark, Users, Sliders, LogOut } from "lucide-react"
 import type { RootState } from "@/store"
 import { useLogoutMutation } from "@/api/auth"
 import ConfirmModal from "@/components/ui/ConfirmModal"
+import AppLogo from "@/components/ui/AppLogo"
 
 const navItems = [
   { to: "/emission", icon: Landmark, label: "Emisión de Egresos" },
@@ -33,7 +34,7 @@ const Sidebar = () => {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="sidebar-brand-icon">
-              <Droplets size={20} color="#fff" />
+              <AppLogo className="sidebar-brand-logo" />
             </div>
             <div className="sidebar-brand-text">
               <span className="sidebar-brand-title">UMASENY</span>

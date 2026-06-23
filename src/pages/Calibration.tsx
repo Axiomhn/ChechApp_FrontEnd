@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react"
 import {
   Save,
-  Printer,
   Sliders,
   CheckCircle2,
   RotateCcw,
-  AlertTriangle,
   Info,
 } from "lucide-react"
 import { getAppApi } from "@/lib/app-api"
@@ -15,13 +13,10 @@ import type { AppSettings } from "@/types/electron"
 import {
   defaultCalibrationSettings,
   type CalibrationSettings,
-  type PrinterInfo,
 } from "@/types/calibration"
 
 function mapApiSettings(data: AppSettings): CalibrationSettings {
   return {
-    printer_name: data.printer_name || "",
-    print_method: data.print_method || "native",
     offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
     offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
     offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
@@ -63,7 +58,6 @@ function withResetOffsets(settings: CalibrationSettings): CalibrationSettings {
 }
 
 export default function CalibrationPage() {
-  const [printers, setPrinters] = useState<PrinterInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState("")
   const [settings, setSettings] = useState<CalibrationSettings>(
@@ -73,12 +67,10 @@ export default function CalibrationPage() {
 
   useEffect(() => {
     let active = true
-    const api = getAppApi()
-
-    Promise.all([api.config.getPrinters(), api.config.getSettings()])
-      .then(([printerList, res]) => {
+    getAppApi()
+      .config.getSettings()
+      .then((res) => {
         if (!active) return
-        setPrinters(printerList || [])
         if (res.success && res.data) {
           setSettings(mapApiSettings(res.data))
         }
@@ -172,151 +164,7 @@ export default function CalibrationPage() {
         </div>
       )}
 
-      <div className="calibration-grid">
-        <div className="calibration-sidebar">
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-icon">
-                <Printer size={17} />
-              </div>
-              <div>
-                <div className="card-title">Dispositivo de Impresión</div>
-                <div className="card-subtitle">
-                  Impresora activa del sistema Windows
-                </div>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="form-group">
-                <label htmlFor="select-impresora">Impresora Activa</label>
-                <select
-                  id="select-impresora"
-                  value={settings.printer_name}
-                  onChange={(e) =>
-                    setSettings({ ...settings, printer_name: e.target.value })
-                  }
-                >
-                  <option value="">-- Seleccionar Impresora --</option>
-                  {printers.map((p) => (
-                    <option key={p.name} value={p.name}>
-                      {p.name}
-                      {p.isDefault ? " ★ (Predeterminada)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <span className="calibration-field-hint">
-                  Impresoras detectadas por Windows en esta máquina.
-                </span>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="select-motor">Motor de Impresión</label>
-                <select
-                  id="select-motor"
-                  value={settings.print_method}
-                  onChange={(e) =>
-                    setSettings({ ...settings, print_method: e.target.value })
-                  }
-                >
-                  <option value="native">
-                    Nativo ESC/P (Spooler RAW · LX-350)
-                  </option>
-                  <option value="graphical">
-                    Gráfico Windows (HTML → Driver)
-                  </option>
-                </select>
-              </div>
-
-              <div className="alert alert-warning calibration-alert-last">
-                <AlertTriangle size={15} />
-                <div>
-                  <strong>ESC/P Nativo</strong>: envía comandos binarios
-                  directamente al spooler (más rápido para matriciales).{" "}
-                  <strong>Gráfico</strong>: renderiza con tipografía a través
-                  del driver Windows.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-header">
-              <div className="card-header-icon">
-                <Sliders size={17} />
-              </div>
-              <div>
-                <div className="card-title">Tamaño de Letra Global</div>
-                <div className="card-subtitle">
-                  Aplica a todos los campos del cheque
-                </div>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="form-group calibration-form-group-last">
-                <label htmlFor="select-fuente">Tamaño de Fuente (puntos)</label>
-                <div className="calibration-font-row">
-                  <select
-                    id="select-fuente"
-                    value={settings.fuente_tamano}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        fuente_tamano: parseInt(e.target.value),
-                      })
-                    }
-                    className="calibration-font-select"
-                  >
-                    {FONT_SIZE_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {s} pt
-                      </option>
-                    ))}
-                  </select>
-                  <div
-                    className="calibration-font-preview"
-                    style={{
-                      fontSize: `${Math.min(settings.fuente_tamano, 18)}px`,
-                    }}
-                  >
-                    Aa
-                  </div>
-                </div>
-              </div>
-
-              <div className="calibration-range-wrap">
-                <input
-                  type="range"
-                  min={FONT_SIZE_MIN}
-                  max={FONT_SIZE_MAX}
-                  step="1"
-                  value={settings.fuente_tamano}
-                  onChange={(e) =>
-                    setSettings({
-                      ...settings,
-                      fuente_tamano: parseInt(e.target.value),
-                    })
-                  }
-                  className="calibration-range"
-                />
-                <div className="calibration-range-labels">
-                  <span>8 pt (pequeño)</span>
-                  <span>20 pt (grande)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="alert alert-info calibration-alert-last">
-            <Info size={15} />
-            <div className="calibration-info-text">
-              <strong>Modo Gráfico:</strong> X e Y se miden en píxeles.
-              <br />
-              <strong>Modo ESC/P:</strong> X = columnas de carácter, Y = líneas
-              de papel.
-            </div>
-          </div>
-        </div>
-
+      <div className="calibration-stack">
         <div className="card">
           <div className="card-header">
             <div className="card-header-icon">
@@ -392,6 +240,82 @@ export default function CalibrationPage() {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <div className="card-header-icon">
+              <Sliders size={17} />
+            </div>
+            <div>
+              <div className="card-title">Tamaño de Letra Global</div>
+              <div className="card-subtitle">
+                Solo aplica al cheque impreso (no afecta la Orden de Pago)
+              </div>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="form-group calibration-form-group-last">
+              <label htmlFor="select-fuente">Tamaño de Fuente (puntos)</label>
+              <div className="calibration-font-row">
+                <select
+                  id="select-fuente"
+                  value={settings.fuente_tamano}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      fuente_tamano: parseInt(e.target.value),
+                    })
+                  }
+                  className="calibration-font-select"
+                >
+                  {FONT_SIZE_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s} pt
+                    </option>
+                  ))}
+                </select>
+                <div
+                  className="calibration-font-preview"
+                  style={{
+                    fontSize: `${Math.min(settings.fuente_tamano, 18)}px`,
+                  }}
+                >
+                  Aa
+                </div>
+              </div>
+            </div>
+
+            <div className="calibration-range-wrap">
+              <input
+                type="range"
+                min={FONT_SIZE_MIN}
+                max={FONT_SIZE_MAX}
+                step="1"
+                value={settings.fuente_tamano}
+                onChange={(e) =>
+                  setSettings({
+                    ...settings,
+                    fuente_tamano: parseInt(e.target.value),
+                  })
+                }
+                className="calibration-range"
+              />
+              <div className="calibration-range-labels">
+                <span>8 pt (pequeño)</span>
+                <span>20 pt (grande)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="alert alert-info calibration-alert-last">
+          <Info size={15} />
+          <div className="calibration-info-text">
+            Los offsets del cheque se miden en <strong>columnas (X)</strong> y{" "}
+            <strong>líneas de papel (Y)</strong> para impresión ESC/P en la
+            LX-350.
           </div>
         </div>
       </div>

@@ -10,6 +10,9 @@ const PAGE_WIDTH_PX = 816;
 const PAGE_HEIGHT_PX = 1056;
 const SCALE = PAGE_WIDTH_PX / DESIGN_WIDTH;
 
+/** Carta 8.5" × 11" en micrones — tamaño fijo de impresión/PDF. */
+const ORDEN_PAGO_PAGE_SIZE_MICRONS = { width: 215900, height: 279400 };
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -18,44 +21,29 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-/** Orden de pago solo necesita la fecha, no el lugar. */
 function formatMontoDisplay(monto) {
   const cleaned = String(monto ?? '').replace(/,/g, '').trim();
   if (!cleaned) return '';
   const n = parseFloat(cleaned);
   if (!Number.isFinite(n)) return String(monto ?? '');
-  return n.toLocaleString('en-US', {
+  const capped = Math.min(n, 999_999_999.99);
+  return capped.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 }
 
-function extractFechaSolo(fechaCompleta) {
-  const s = String(fechaCompleta ?? '').trim();
-  if (!s) return '';
+const LUGAR_FECHA_FIELD_LEFT = 620;
+const UNIDAD_EJECUTORA_LEFT = 1100;
+const LUGAR_FECHA_FIELD_MAX_WIDTH =
+  UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - 16;
 
-  const afterLastComma = s.match(/,\s*([^,]+)$/);
-  if (afterLastComma) {
-    const candidate = afterLastComma[1].trim();
-    if (/\d{1,2}\s+de\s+/i.test(candidate)) return candidate;
-  }
+function getLugarFechaFontSize(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return 44;
 
-  const inline = s.match(/\d{1,2}\s+de\s+[\p{L}\s]+\s+de\s+\d{4}/iu);
-  if (inline) return inline[0].trim();
-
-  return s;
-}
-
-/** Espacio hasta UNIDAD EJECUTORA (876px) menos margen. */
-const FECHA_FIELD_LEFT = 399;
-const FECHA_FIELD_MAX_WIDTH = 470;
-
-function getFechaFontSize(fecha) {
-  const text = String(fecha ?? '').trim();
-  if (!text) return 44;
-
-  const size = Math.floor(FECHA_FIELD_MAX_WIDTH / (text.length * 0.52));
-  return Math.max(30, Math.min(44, size));
+  const size = Math.floor(LUGAR_FECHA_FIELD_MAX_WIDTH / (value.length * 0.52));
+  return Math.max(22, Math.min(44, size));
 }
 
 function getLayout() {
@@ -82,37 +70,221 @@ function buildFieldDiv(className, style, content) {
   return `<div class="orden-field ${className}" style="${style}">${escapeHtml(content)}</div>`;
 }
 
+const CONTENT_RIGHT = 2356;
+const ROW_807_TOP = 807;
+const ROW_807_LEFT = 156;
+const AFECTANDO_BLOCK_LEFT = 1520;
+const L_PAREN_BLOCK_WIDTH = 480;
+const L_AFECTANDO_GAP = 40;
+const L_PAREN_SHIFT_RIGHT = 35;
+const L_PAREN_BLOCK_LEFT =
+  AFECTANDO_BLOCK_LEFT - L_AFECTANDO_GAP - L_PAREN_BLOCK_WIDTH + L_PAREN_SHIFT_RIGHT;
+const ROW_807_SECTION_GAP = 16;
+const ROW_807_UNDERSCORE_WIDTH =
+  L_PAREN_BLOCK_LEFT - ROW_807_LEFT - ROW_807_SECTION_GAP;
+
 const MONTO_LETRAS_LINE1_LEFT = 552;
 const MONTO_LETRAS_LINE1_WIDTH = 1694;
-const MONTO_LETRAS_LINE2_LEFT = 156;
-const MONTO_LETRAS_LINE2_WIDTH = 2090;
+const MONTO_LETRAS_LINE2_LEFT = ROW_807_LEFT;
+const MONTO_LETRAS_LINE2_WIDTH = ROW_807_UNDERSCORE_WIDTH;
 const MONTO_LETRAS_ROW1_TOP = 719;
 const MONTO_LETRAS_ROW2_TOP = 801;
-const MONTO_LETRAS_LINE1_MAX_CHARS = 68;
+const MONTO_LETRAS_FONT_SIZE = 42;
+const MONTO_LETRAS_FONT_SIZE_MIN = 22;
+const MONTO_LETRAS_WIDTH_SAFETY = 1.15;
+const MONTO_NUMERIC_LEFT = L_PAREN_BLOCK_LEFT + 82;
+const MONTO_NUMERIC_ROW_TOP = ROW_807_TOP;
+const MONTO_NUMERIC_WIDTH = 220;
 
-function splitMontoLetras(text) {
+const ROW_807_STATIC_MARKER = '<!-- ORDEN_ROW_807_STATIC -->';
+
+function buildRow807StaticHtml() {
+  const underscoreCount = Math.max(19, Math.ceil(ROW_807_UNDERSCORE_WIDTH / 26));
+  const underscores = '_'.repeat(underscoreCount);
+  const rowStyle = [
+    'position:absolute',
+    'color:black',
+    'font-size:55px',
+    "font-family:'Alexandria',Arial,sans-serif",
+    'font-weight:400',
+    'white-space:nowrap',
+    'box-sizing:border-box',
+  ].join(';');
+
+  return [
+    `<div style="left:${ROW_807_LEFT}px;top:${ROW_807_TOP}px;width:${ROW_807_UNDERSCORE_WIDTH}px;overflow:hidden;${rowStyle}">${underscores}</div>`,
+    `<div style="left:${L_PAREN_BLOCK_LEFT}px;top:${ROW_807_TOP}px;${rowStyle}">(L._____________)</div>`,
+    `<div style="left:${AFECTANDO_BLOCK_LEFT}px;top:${ROW_807_TOP}px;${rowStyle}">AFECTANDO LO SIGUIENTE:</div>`,
+  ].join('\n    ');
+}
+
+function injectRow807Static(layout) {
+  return layout.replace(ROW_807_STATIC_MARKER, buildRow807StaticHtml());
+}
+
+function estimateMontoLetrasWidth(text, fontSize = MONTO_LETRAS_FONT_SIZE) {
+  let width = 0;
+  for (const ch of String(text)) {
+    if (ch === ' ') {
+      width += fontSize * 0.26;
+    } else if (ch === '/' || ch === '.') {
+      width += fontSize * 0.36;
+    } else if ('MWQG%'.includes(ch)) {
+      width += fontSize * 0.8;
+    } else if ('IL|!1'.includes(ch)) {
+      width += fontSize * 0.3;
+    } else {
+      width += fontSize * 0.62;
+    }
+  }
+  return width * MONTO_LETRAS_WIDTH_SAFETY;
+}
+
+function getMontoLetrasFontSize(text, maxWidth, maxSize = MONTO_LETRAS_FONT_SIZE) {
+  const value = String(text ?? '').trim();
+  if (!value) return maxSize;
+
+  const widthAtDefault = estimateMontoLetrasWidth(value, maxSize);
+  if (widthAtDefault <= maxWidth) {
+    return maxSize;
+  }
+
+  const scaled = Math.floor((maxSize * maxWidth) / widthAtDefault);
+  return Math.max(MONTO_LETRAS_FONT_SIZE_MIN, Math.min(maxSize, scaled));
+}
+
+function rebalanceMontoLetrasLines(
+  line1,
+  line2,
+  fontSize = MONTO_LETRAS_FONT_SIZE
+) {
+  if (!line2) return { line1, line2 };
+
+  const words1 = line1.split(/\s+/).filter(Boolean);
+  const words2 = line2.split(/\s+/).filter(Boolean);
+
+  while (words2.length > 1) {
+    const line2Text = words2.join(' ');
+    if (estimateMontoLetrasWidth(line2Text, fontSize) <= MONTO_LETRAS_LINE2_WIDTH) {
+      break;
+    }
+
+    const word = words2.shift();
+    const candidateLine1 = [...words1, word].join(' ');
+    if (estimateMontoLetrasWidth(candidateLine1, fontSize) > MONTO_LETRAS_LINE1_WIDTH) {
+      words2.unshift(word);
+      break;
+    }
+
+    words1.push(word);
+  }
+
+  return {
+    line1: words1.join(' '),
+    line2: words2.join(' '),
+  };
+}
+
+function montoLetrasLinesFitAtFont(line1, line2, fontSize) {
+  if (estimateMontoLetrasWidth(line1, fontSize) > MONTO_LETRAS_LINE1_WIDTH) {
+    return false;
+  }
+  if (!line2) {
+    return true;
+  }
+  return estimateMontoLetrasWidth(line2, fontSize) <= MONTO_LETRAS_LINE2_WIDTH;
+}
+
+function buildMontoLetrasLineExtra(text, maxWidth, widthPx, fontSize) {
+  const resolvedFontSize =
+    fontSize ?? getMontoLetrasFontSize(text, maxWidth);
+  return [
+    `font-size:${resolvedFontSize}px`,
+    'line-height:1.15',
+    'white-space:nowrap',
+    'overflow:visible',
+    `width:${widthPx}px`,
+  ].join(';');
+}
+
+function splitMontoLetrasByWidth(text, maxWidth, fontSize = MONTO_LETRAS_FONT_SIZE) {
   const value = String(text ?? '').trim();
   if (!value) return { line1: '', line2: '' };
-  if (value.length <= MONTO_LETRAS_LINE1_MAX_CHARS) {
+  if (estimateMontoLetrasWidth(value, fontSize) <= maxWidth) {
     return { line1: value, line2: '' };
   }
 
-  let splitAt = value.lastIndexOf(' ', MONTO_LETRAS_LINE1_MAX_CHARS);
-  if (splitAt <= 0) splitAt = MONTO_LETRAS_LINE1_MAX_CHARS;
+  const words = value.split(/\s+/);
+  const line1Words = [];
 
-  return {
-    line1: value.slice(0, splitAt).trim(),
-    line2: value.slice(splitAt).trim(),
-  };
+  for (const word of words) {
+    const candidate = line1Words.length ? `${line1Words.join(' ')} ${word}` : word;
+    if (estimateMontoLetrasWidth(candidate, fontSize) <= maxWidth) {
+      line1Words.push(word);
+    } else {
+      break;
+    }
+  }
+
+  if (!line1Words.length) {
+    line1Words.push(words[0]);
+  }
+
+  const line1 = line1Words.join(' ');
+  const line2 = words.slice(line1Words.length).join(' ');
+  return { line1, line2 };
+}
+
+function splitMontoLetrasContent(value, fontSize = MONTO_LETRAS_FONT_SIZE) {
+  const text = String(value ?? '').trim();
+  if (!text) return { line1: '', line2: '' };
+
+  const centsMatch = text.match(/^(.+?)\s+(CON\s+\d{2}\/100)$/i);
+  if (!centsMatch) {
+    const split = splitMontoLetrasByWidth(text, MONTO_LETRAS_LINE1_WIDTH, fontSize);
+    return rebalanceMontoLetrasLines(split.line1, split.line2, fontSize);
+  }
+
+  const main = centsMatch[1].trim();
+  const suffix = centsMatch[2].trim();
+
+  if (estimateMontoLetrasWidth(text, fontSize) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return { line1: text, line2: '' };
+  }
+
+  if (estimateMontoLetrasWidth(main, fontSize) <= MONTO_LETRAS_LINE1_WIDTH) {
+    return rebalanceMontoLetrasLines(main, suffix, fontSize);
+  }
+
+  const { line1, line2 } = splitMontoLetrasByWidth(main, MONTO_LETRAS_LINE1_WIDTH, fontSize);
+  return rebalanceMontoLetrasLines(
+    line1,
+    line2 ? `${line2} ${suffix}` : suffix,
+    fontSize
+  );
+}
+
+function resolveMontoLetrasLayout(text) {
+  const value = String(text ?? '').trim();
+  if (!value) {
+    return { line1: '', line2: '', fontSize: MONTO_LETRAS_FONT_SIZE };
+  }
+
+  for (let fontSize = MONTO_LETRAS_FONT_SIZE; fontSize >= MONTO_LETRAS_FONT_SIZE_MIN; fontSize--) {
+    const { line1, line2 } = splitMontoLetrasContent(value, fontSize);
+    if (montoLetrasLinesFitAtFont(line1, line2, fontSize)) {
+      return { line1, line2, fontSize };
+    }
+  }
+
+  const { line1, line2 } = splitMontoLetrasContent(value, MONTO_LETRAS_FONT_SIZE_MIN);
+  return { line1, line2, fontSize: MONTO_LETRAS_FONT_SIZE_MIN };
 }
 
 /** Renglón 1 tras "LA SUMA DE :"; renglón 2 con ancho completo, en la 2ª línea del formulario. */
 function buildMontoLetrasDiv(content) {
-  const { line1, line2 } = splitMontoLetras(content);
+  const { line1, line2, fontSize } = resolveMontoLetrasLayout(content);
   if (!line1 && !line2) return '';
-
-  const lineStyle =
-    'font-size:42px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
 
   if (!line2) {
     return buildFieldDiv(
@@ -120,7 +292,12 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE1_LEFT,
         MONTO_LETRAS_ROW1_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line1,
+          MONTO_LETRAS_LINE1_WIDTH,
+          MONTO_LETRAS_LINE1_WIDTH,
+          fontSize
+        )
       ),
       line1
     );
@@ -132,7 +309,12 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE1_LEFT,
         MONTO_LETRAS_ROW1_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE1_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line1,
+          MONTO_LETRAS_LINE1_WIDTH,
+          MONTO_LETRAS_LINE1_WIDTH,
+          fontSize
+        )
       ),
       line1
     ),
@@ -141,28 +323,124 @@ function buildMontoLetrasDiv(content) {
       fieldStyle(
         MONTO_LETRAS_LINE2_LEFT,
         MONTO_LETRAS_ROW2_TOP,
-        `${lineStyle};width:${MONTO_LETRAS_LINE2_WIDTH}px`
+        buildMontoLetrasLineExtra(
+          line2,
+          MONTO_LETRAS_LINE2_WIDTH,
+          MONTO_LETRAS_LINE2_WIDTH,
+          fontSize
+        )
       ),
       line2
     ),
   ].join('\n    ');
 }
 
+const DESCRIPCION_ROW_COUNT = 4;
+const ESTRUCTURA_ROW_COUNT = 5;
+const DESCRIPCION_MAX_LENGTH = 100;
+const DETALLE_GASTO_MAX_LENGTH = 80;
+
+function normalizeDescripciones(descripciones) {
+  const source = Array.isArray(descripciones) ? descripciones : [];
+  return Array.from({ length: DESCRIPCION_ROW_COUNT }, (_, index) =>
+    String(source[index] ?? '').trim().slice(0, DESCRIPCION_MAX_LENGTH)
+  );
+}
+
+function parseMontoValue(value) {
+  const cleaned = String(value ?? '').replace(/,/g, '').trim();
+  if (!cleaned) return null;
+  const n = parseFloat(cleaned);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(n, 999_999_999.99);
+}
+
+function sumEstructuraSubTotales(estructura) {
+  const source = Array.isArray(estructura) ? estructura : [];
+  let sum = 0;
+  let hasValue = false;
+
+  for (let i = 0; i < ESTRUCTURA_ROW_COUNT; i++) {
+    const row = source[i] ?? {};
+    const parsed = parseMontoValue(row.subTotal ?? row.sub_total ?? '');
+    if (parsed === null) continue;
+    sum += parsed;
+    hasValue = true;
+  }
+
+  return hasValue ? formatMontoDisplay(sum) : '';
+}
+
+function normalizeEstructura(estructura) {
+  const source = Array.isArray(estructura) ? estructura : [];
+  return Array.from({ length: ESTRUCTURA_ROW_COUNT }, (_, index) => {
+    const row = source[index] ?? {};
+    const subTotalRaw = String(row.subTotal ?? row.sub_total ?? '').trim();
+    return {
+      detalle: String(row.detalle ?? '')
+        .trim()
+        .slice(0, DETALLE_GASTO_MAX_LENGTH),
+      subTotal: subTotalRaw ? formatMontoDisplay(subTotalRaw) : '',
+    };
+  });
+}
+
+function buildDescripcionTableBody(descripciones) {
+  return normalizeDescripciones(descripciones)
+    .map((text) => {
+      const content = text ? escapeHtml(text) : '&nbsp;';
+      return `            <tr><td>${content}</td></tr>`;
+    })
+    .join('\n');
+}
+
+function buildEstructuraTableBody(estructura) {
+  const dataRows = normalizeEstructura(estructura)
+    .map(({ detalle, subTotal }) => {
+      const detalleContent = detalle ? escapeHtml(detalle) : '&nbsp;';
+      const subTotalContent = subTotal ? escapeHtml(subTotal) : '&nbsp;';
+      return `            <tr><td class="orden-estructura-col-detalle">${detalleContent}</td><td>${subTotalContent}</td></tr>`;
+    })
+    .join('\n');
+
+  const grandTotal = sumEstructuraSubTotales(estructura);
+  const totalCellContent = grandTotal ? escapeHtml(grandTotal) : '&nbsp;';
+  const totalRow = `            <tr class="orden-estructura-fila-total"><td>TOTAL</td><td>${totalCellContent}</td></tr>`;
+
+  return dataRows ? `${dataRows}\n${totalRow}` : totalRow;
+}
+
+function fillOrdenTables(layout, data) {
+  const descripcionBody = buildDescripcionTableBody(data.descripciones);
+  const estructuraBody = buildEstructuraTableBody(data.estructura);
+
+  return layout
+    .replace(
+      /(<table class="orden-tabla orden-tabla-descripcion"[\s\S]*?<tbody>)[\s\S]*?(<\/tbody>)/,
+      `$1\n${descripcionBody}\n        $2`
+    )
+    .replace(
+      /(<table class="orden-tabla orden-tabla-estructura"[\s\S]*?<tbody>)[\s\S]*?(<\/tbody>)/,
+      `$1\n${estructuraBody}\n        $2`
+    );
+}
+
 function buildOrdenPagoHtml(data) {
-  const fecha = extractFechaSolo(data.fecha);
+  // Tipografía y escala fijas en plantilla/CSS. No lee fuente_tamano ni calibración de cheque.
+  const lugarFecha = String(data.fecha ?? '').trim();
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
   const monto = formatMontoDisplay(data.monto);
 
   const fields = [
     buildFieldDiv(
-      'orden-fecha',
+      'orden-lugar-fecha',
       fieldStyle(
-        FECHA_FIELD_LEFT,
+        LUGAR_FECHA_FIELD_LEFT,
         543,
-        `font-size:${getFechaFontSize(fecha)}px;max-width:${FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
+        `font-size:${getLugarFechaFontSize(lugarFecha)}px;max-width:${LUGAR_FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
       ),
-      fecha
+      lugarFecha
     ),
     buildFieldDiv(
       'orden-beneficiario',
@@ -173,9 +451,9 @@ function buildOrdenPagoHtml(data) {
     buildFieldDiv(
       'orden-monto',
       fieldStyle(
-        855,
-        807,
-        'font-size:48px;width:200px;text-align:left;white-space:nowrap'
+        MONTO_NUMERIC_LEFT,
+        MONTO_NUMERIC_ROW_TOP,
+        `font-size:48px;width:${MONTO_NUMERIC_WIDTH}px;text-align:left;white-space:nowrap`
       ),
       monto
     ),
@@ -183,7 +461,7 @@ function buildOrdenPagoHtml(data) {
     .filter(Boolean)
     .join('\n    ');
 
-  const rawLayout = getLayout().trim();
+  const rawLayout = injectRow807Static(fillOrdenTables(getLayout().trim(), data));
   const insertAt = rawLayout.lastIndexOf('</div>');
   const layout =
     insertAt === -1
@@ -224,8 +502,10 @@ function buildOrdenPagoHtml(data) {
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
-    .orden-letras {
-      overflow: hidden;
+    .orden-letras,
+    .orden-letras-l1,
+    .orden-letras-l2 {
+      overflow: visible;
     }
     .orden-tabla {
       border-collapse: collapse;
@@ -258,23 +538,21 @@ function buildOrdenPagoHtml(data) {
     .orden-tabla-descripcion {
       width: 2200px;
     }
-    .orden-tabla-descripcion th:nth-child(1),
-    .orden-tabla-descripcion td:nth-child(1) {
-      width: 1621px;
-    }
-    .orden-tabla-descripcion th:nth-child(2),
-    .orden-tabla-descripcion td:nth-child(2) {
-      width: 579px;
+    .orden-tabla-descripcion th,
+    .orden-tabla-descripcion td {
+      width: 2200px;
     }
     .orden-tabla-descripcion thead th {
       height: 58px;
       text-align: center;
     }
-    .orden-tabla-descripcion tbody td:nth-child(1) {
-      text-align: left;
-    }
     .orden-tabla-descripcion tbody td {
       height: 63px;
+      text-align: left;
+      font-size: 36px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .orden-tabla-estructura {
       width: 2200px;
@@ -288,34 +566,42 @@ function buildOrdenPagoHtml(data) {
     }
     .orden-tabla-estructura .orden-estructura-columnas th {
       height: 124px;
-      font-size: 40px;
-      text-align: center;
-      line-height: 1.1;
-    }
-    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-chico {
-      font-size: 26px;
-      line-height: 1.05;
-      text-align: left;
-      padding-left: 10px;
-    }
-    .orden-tabla-estructura .orden-estructura-columnas th.orden-estructura-th-medio {
       font-size: 38px;
       line-height: 1.1;
     }
+    .orden-tabla-estructura th.orden-estructura-th-detalle {
+      width: 1820px;
+      max-width: 1820px;
+      text-align: center !important;
+      vertical-align: middle;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .orden-tabla-estructura td.orden-estructura-col-detalle {
+      width: 1820px;
+      max-width: 1820px;
+      text-align: left !important;
+      vertical-align: middle;
+      padding-left: 10px;
+      padding-right: 8px;
+    }
+    .orden-tabla-estructura th.orden-estructura-th-subtotal,
+    .orden-tabla-estructura td:nth-child(2) {
+      width: 380px;
+      max-width: 380px;
+      text-align: center !important;
+      vertical-align: middle;
+    }
     .orden-tabla-estructura tbody td {
       height: 63px;
+      font-size: 36px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .orden-tabla-estructura .orden-estructura-fila-total td {
-      height: 63px;
-      text-align: center;
-    }
-    .orden-tabla-estructura .orden-estructura-total-spacer {
-      width: 1280px;
-      padding: 0;
-      border: none;
-      background: white;
-      line-height: 0;
-      font-size: 0;
+      text-align: center !important;
+      vertical-align: middle;
     }
   </style>
 </head>
@@ -329,6 +615,6 @@ function buildOrdenPagoHtml(data) {
 
 module.exports = {
   buildOrdenPagoHtml,
-  extractFechaSolo,
+  ORDEN_PAGO_PAGE_SIZE_MICRONS,
   SCALE,
 };

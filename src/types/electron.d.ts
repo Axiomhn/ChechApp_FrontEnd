@@ -8,8 +8,6 @@ export interface Provider {
 }
 
 export interface AppSettings {
-  printer_name?: string
-  print_method?: string
   offset_cheque_fecha_x?: string
   offset_cheque_fecha_y?: string
   offset_cheque_monto_x?: string
@@ -73,6 +71,7 @@ export interface ChechAppApi {
       offsets: PrintOffsets
     ) => Promise<ApiResult>
     graphical: (
+      printerName: string,
       documentType: string,
       data: PrintPayload,
       offsets: PrintOffsets

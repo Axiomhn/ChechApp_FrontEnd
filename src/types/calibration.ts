@@ -1,6 +1,4 @@
 export interface CalibrationSettings {
-  printer_name: string
-  print_method: string
   offset_cheque_fecha_x: number
   offset_cheque_fecha_y: number
   offset_cheque_monto_x: number
@@ -13,8 +11,6 @@ export interface CalibrationSettings {
 }
 
 export const defaultCalibrationSettings = (): CalibrationSettings => ({
-  printer_name: "",
-  print_method: "native",
   offset_cheque_fecha_x: 0,
   offset_cheque_fecha_y: 0,
   offset_cheque_monto_x: 0,

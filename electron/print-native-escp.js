@@ -87,7 +87,7 @@ async function printNativeEscP(printerName, documentType, data, offsets = {}) {
     return {
       success: false,
       error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+        'No hay impresora seleccionada. Elija una impresora en el diálogo de impresión.',
     };
   }
 
@@ -103,8 +103,7 @@ async function printNativeEscP(printerName, documentType, data, offsets = {}) {
       success: false,
       error:
         'El modo nativo ESC/P no funciona con impresoras virtuales (PDF/XPS). ' +
-        'Para generar un PDF de prueba, cambie el motor a "Gráfico Windows" en Calibración. ' +
-        'Use nativo ESC/P solo con la impresora física (p. ej. Epson LX-350).',
+        'Use una impresora física (p. ej. Epson LX-350) para imprimir cheques.',
     };
   }
 

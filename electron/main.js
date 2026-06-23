@@ -10,8 +10,8 @@ function createWindow() {
   Menu.setApplicationMenu(null);
 
   const iconPath = app.isPackaged
-    ? path.join(__dirname, '../dist/icon.png')
-    : path.join(__dirname, '../public/icon.png');
+    ? path.join(__dirname, '../dist/icon.jpeg')
+    : path.join(__dirname, '../public/icon.jpeg');
 
   mainWindow = new BrowserWindow({
     width: 1385,
@@ -94,13 +94,14 @@ function registerIpcHandlers() {
 
   ipcMain.handle(
     'print:graphical',
-    async (_event, { documentType, data, offsets }) => {
+    async (_event, { printerName, documentType, data, offsets }) => {
       try {
         return await printGraphical(
           app.getPath('userData'),
           documentType,
           data,
-          offsets
+          offsets,
+          printerName
         );
       } catch (err) {
         console.error('print:graphical', err);

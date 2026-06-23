@@ -1,6 +1,6 @@
 const { BrowserWindow } = require('electron');
 const { loadSettings } = require('./calibration-store');
-const { buildOrdenPagoHtml } = require('./orden-pago-template');
+const { buildOrdenPagoHtml, ORDEN_PAGO_PAGE_SIZE_MICRONS } = require('./orden-pago-template');
 const { buildChequeHtml, CHEQUE_PAGE_SIZE_MICRONS } = require('./cheque-template');
 
 let printWindow = null;
@@ -10,11 +10,6 @@ function destroyPrintWindow() {
     printWindow.destroy();
   }
   printWindow = null;
-}
-
-function resolvePrinterName(userDataPath, fallback = '') {
-  const settings = loadSettings(userDataPath);
-  return settings.printer_name?.trim() || fallback || undefined;
 }
 
 function printHtmlDocument({ html, deviceName, pageSize, printBackground = true }) {
@@ -74,61 +69,59 @@ function printHtmlDocument({ html, deviceName, pageSize, printBackground = true 
   });
 }
 
-async function printOrdenPago(userDataPath, data) {
+async function printOrdenPago(data, deviceName) {
   const html = buildOrdenPagoHtml(data);
-  const deviceName = resolvePrinterName(
-    userDataPath,
-    'Microsoft Print to PDF'
-  );
+  const printer = String(deviceName ?? '').trim();
 
-  if (!deviceName) {
+  if (!printer) {
     return {
       success: false,
-      error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+      error: 'No hay impresora seleccionada.',
     };
   }
 
   return printHtmlDocument({
     html,
-    deviceName,
-    pageSize: 'Letter',
+    deviceName: printer,
+    pageSize: ORDEN_PAGO_PAGE_SIZE_MICRONS,
     printBackground: true,
   });
 }
 
-async function printCheque(userDataPath, data, offsets = {}) {
+async function printCheque(userDataPath, data, offsets = {}, deviceName = '') {
   const settings = loadSettings(userDataPath);
   const fuenteTamano = parseInt(settings.fuente_tamano || '12', 10);
   const html = buildChequeHtml({ data, offsets, fuenteTamano });
-  const deviceName = resolvePrinterName(
-    userDataPath,
-    'Microsoft Print to PDF'
-  );
+  const printer = String(deviceName ?? '').trim();
 
-  if (!deviceName) {
+  if (!printer) {
     return {
       success: false,
-      error:
-        'No hay impresora configurada. Seleccione una en Calibración y guarde la configuración.',
+      error: 'No hay impresora seleccionada.',
     };
   }
 
   return printHtmlDocument({
     html,
-    deviceName,
+    deviceName: printer,
     pageSize: CHEQUE_PAGE_SIZE_MICRONS,
     printBackground: false,
   });
 }
 
-async function printGraphical(userDataPath, documentType, data, offsets = {}) {
+async function printGraphical(
+  userDataPath,
+  documentType,
+  data,
+  offsets = {},
+  printerName = ''
+) {
   if (documentType === 'ORDEN_PAGO') {
-    return printOrdenPago(userDataPath, data);
+    return printOrdenPago(data, printerName);
   }
 
   if (documentType === 'CHEQUE') {
-    return printCheque(userDataPath, data, offsets);
+    return printCheque(userDataPath, data, offsets, printerName);
   }
 
   return {

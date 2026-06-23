@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom"
 import { useForm, type Resolver } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
 import * as yup from "yup"
-import { User, Lock, AlertCircle, Shield, Loader2, Droplets } from "lucide-react"
+import { User, Lock, AlertCircle, Shield, Loader2 } from "lucide-react"
 import { useLoginMutation } from "@/api/auth"
 import { cn } from "@/lib/utils"
+import AppLogo from "@/components/ui/AppLogo"
 
 const schema = yup.object({
   email: yup.string().trim().required("Por favor complete todos los campos."),
@@ -74,8 +75,8 @@ export default function LoginPage() {
           }}
         />
 
-        <div className="relative z-10 mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-white/20 bg-white/10">
-          <Droplets size={38} color="#FFFFFF" />
+        <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-white/20 bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.2)]">
+          <AppLogo className="h-full w-full object-contain" />
         </div>
 
         <h1 className="relative z-10 text-center text-[28px] font-extrabold tracking-tight text-white">
@@ -203,10 +204,6 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <p className="mt-6 text-center text-[11px] text-[#6B7C93]">
-            Acceso administrativo · Sin opción de recuperación de contraseña
-          </p>
         </div>
       </div>
     </div>
