@@ -285,11 +285,12 @@ export default function EmissionPage() {
 
       const payload = buildPrintPayload()
 
-      const printMethod = cfg?.print_method || "native"
-      const result =
-        printMethod === "native"
-          ? await api.print.nativeEscP(printerName, "CHEQUE", payload, offsets)
-          : await api.print.graphical("CHEQUE", payload, offsets)
+      const result = await api.print.nativeEscP(
+        printerName,
+        "CHEQUE",
+        payload,
+        offsets
+      )
 
       if (result.success) {
         setPrintSuccess(
@@ -638,12 +639,10 @@ export default function EmissionPage() {
                 <p className="emission-printer-info">
                   Impresora activa:{" "}
                   <strong>{settings.printer_name || "No configurada"}</strong>
-                  &nbsp;·&nbsp; Motor:{" "}
-                  <strong>
-                    {settings.print_method === "native"
-                      ? "ESC/P Nativo"
-                      : "Gráfico Windows"}
-                  </strong>
+                  &nbsp;·&nbsp; Cheque:{" "}
+                  <strong>ESC/P (LX-350)</strong>
+                  &nbsp;·&nbsp; Orden de Pago:{" "}
+                  <strong>Gráfico Windows</strong>
                 </p>
               )}
             </div>

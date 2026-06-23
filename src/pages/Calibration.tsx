@@ -5,7 +5,6 @@ import {
   Sliders,
   CheckCircle2,
   RotateCcw,
-  AlertTriangle,
   Info,
 } from "lucide-react"
 import { getAppApi } from "@/lib/app-api"
@@ -21,7 +20,6 @@ import {
 function mapApiSettings(data: AppSettings): CalibrationSettings {
   return {
     printer_name: data.printer_name || "",
-    print_method: data.print_method || "native",
     offset_cheque_fecha_x: parseInt(data.offset_cheque_fecha_x ?? "0"),
     offset_cheque_fecha_y: parseInt(data.offset_cheque_fecha_y ?? "0"),
     offset_cheque_monto_x: parseInt(data.offset_cheque_monto_x ?? "0"),
@@ -208,34 +206,6 @@ export default function CalibrationPage() {
                   Impresoras detectadas por Windows en esta máquina.
                 </span>
               </div>
-
-              <div className="form-group">
-                <label htmlFor="select-motor">Motor de Impresión</label>
-                <select
-                  id="select-motor"
-                  value={settings.print_method}
-                  onChange={(e) =>
-                    setSettings({ ...settings, print_method: e.target.value })
-                  }
-                >
-                  <option value="native">
-                    Nativo ESC/P (Spooler RAW · LX-350)
-                  </option>
-                  <option value="graphical">
-                    Gráfico Windows (HTML → Driver)
-                  </option>
-                </select>
-              </div>
-
-              <div className="alert alert-warning calibration-alert-last">
-                <AlertTriangle size={15} />
-                <div>
-                  <strong>ESC/P Nativo</strong>: envía comandos binarios
-                  directamente al spooler (más rápido para matriciales).{" "}
-                  <strong>Gráfico</strong>: renderiza con tipografía a través
-                  del driver Windows.
-                </div>
-              </div>
             </div>
           </div>
 
@@ -309,10 +279,9 @@ export default function CalibrationPage() {
           <div className="alert alert-info calibration-alert-last">
             <Info size={15} />
             <div className="calibration-info-text">
-              <strong>Modo Gráfico:</strong> X e Y se miden en píxeles.
-              <br />
-              <strong>Modo ESC/P:</strong> X = columnas de carácter, Y = líneas
-              de papel.
+              Los offsets del cheque se miden en <strong>columnas (X)</strong> y{" "}
+              <strong>líneas de papel (Y)</strong> para impresión ESC/P en la
+              LX-350.
             </div>
           </div>
         </div>

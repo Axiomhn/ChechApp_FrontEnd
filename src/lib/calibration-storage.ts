@@ -8,7 +8,6 @@ export const defaultAppSettings = (): AppSettings => {
   const defaults = defaultCalibrationSettings()
   return {
     printer_name: defaults.printer_name,
-    print_method: defaults.print_method,
     offset_cheque_fecha_x: String(defaults.offset_cheque_fecha_x),
     offset_cheque_fecha_y: String(defaults.offset_cheque_fecha_y),
     offset_cheque_monto_x: String(defaults.offset_cheque_monto_x),
@@ -24,7 +23,6 @@ export const defaultAppSettings = (): AppSettings => {
 export function settingsToAppSettings(settings: CalibrationSettings): AppSettings {
   return {
     printer_name: settings.printer_name,
-    print_method: settings.print_method,
     offset_cheque_fecha_x: String(settings.offset_cheque_fecha_x),
     offset_cheque_fecha_y: String(settings.offset_cheque_fecha_y),
     offset_cheque_monto_x: String(settings.offset_cheque_monto_x),

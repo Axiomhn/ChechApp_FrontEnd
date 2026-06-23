@@ -9,7 +9,6 @@ export interface Provider {
 
 export interface AppSettings {
   printer_name?: string
-  print_method?: string
   offset_cheque_fecha_x?: string
   offset_cheque_fecha_y?: string
   offset_cheque_monto_x?: string
