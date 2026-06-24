@@ -3,7 +3,7 @@ import { store } from '../store';
 import { logout, updateTokens } from '../store/slices/authSlice';
 import type { RefreshResponse } from '@/types/auth';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4789/api/v1';
 
 const api = axios.create({
   baseURL,
