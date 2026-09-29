@@ -24,6 +24,9 @@
       "electron",
       "package.json"
     ],
+    "asarUnpack": [
+      "electron/scripts/**"
+    ],
     "win": {
       "target": "nsis",
       "icon": "public/icon.png"
