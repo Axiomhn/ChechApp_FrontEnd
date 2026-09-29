@@ -1,5 +1,25 @@
 const { exec } = require('child_process');
+const fs = require('fs');
 const path = require('path');
+const { app } = require('electron');
+
+function getPrintRawScriptPath() {
+  const devPath = path.join(__dirname, 'scripts', 'print_raw.ps1');
+  if (!app.isPackaged) {
+    return devPath;
+  }
+  const packagedPath = path.join(
+    process.resourcesPath,
+    'app.asar.unpacked',
+    'electron',
+    'scripts',
+    'print_raw.ps1'
+  );
+  if (fs.existsSync(packagedPath)) {
+    return packagedPath;
+  }
+  return devPath;
+}
 
 function isVirtualPrinter(printerName) {
   const name = String(printerName).toLowerCase();
@@ -60,7 +80,15 @@ function buildChequeEscpPayload(data, offsets = {}) {
 }
 
 function sendRawToPrinter(printerName, hexPayload) {
-  const scriptPath = path.join(__dirname, 'scripts', 'print_raw.ps1');
+  const scriptPath = getPrintRawScriptPath();
+  if (!fs.existsSync(scriptPath)) {
+    return Promise.resolve({
+      success: false,
+      error:
+        `No se encontró el script de impresión en: ${scriptPath}. ` +
+        'Reinstale la aplicación o vuelva a generar el instalador.',
+    });
+  }
   const command = `powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" -PrinterName "${printerName}" -HexData "${hexPayload}"`;
 
   return new Promise((resolve) => {
