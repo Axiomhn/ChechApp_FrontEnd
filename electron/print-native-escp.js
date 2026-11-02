@@ -31,7 +31,8 @@ function isVirtualPrinter(printerName) {
 }
 
 function buildChequeEscpPayload(data, offsets = {}) {
-  const maxRows = 36;
+  // ~4" de área útil del cheque a 1/6" por línea (24 filas); página física 6" (ESC C 0 6).
+  const maxRows = 24;
   const maxCols = 85;
   const grid = Array.from({ length: maxRows }, () => Array(maxCols).fill(' '));
 
@@ -45,16 +46,17 @@ function buildChequeEscpPayload(data, offsets = {}) {
   const offLetrasY = parseInt(offsets.letras_y || 0, 10);
 
   const posFecha = { r: 2 + offFechaY, c: 52 + offFechaX };
-  const posMontoNum = { r: 4 + offMontoY, c: 68 + offMontoX };
+  const posMontoNum = { r: 4 + offMontoY, c: 70 + offMontoX };
   const posBeneficiario = { r: 6 + offBeneY, c: 15 + offBeneX };
   const posMontoLetras = { r: 8 + offLetrasY, c: 8 + offLetrasX };
 
   const injectText = (text, row, col) => {
     if (row < 0 || row >= maxRows) return;
     const startCol = Math.max(0, Math.min(col, maxCols - 1));
-    const len = Math.min(String(text).length, maxCols - startCol);
+    const strText = String(text);
+    const len = Math.min(strText.length, maxCols - startCol);
     for (let i = 0; i < len; i++) {
-      grid[row][startCol + i] = String(text)[i];
+      grid[row][startCol + i] = strText[i];
     }
   };
 
@@ -63,9 +65,23 @@ function buildChequeEscpPayload(data, offsets = {}) {
   injectText(data.beneficiario || '', posBeneficiario.r, posBeneficiario.c);
   injectText(data.montoLetras || data.montoLetters || '', posMontoLetras.r, posMontoLetras.c);
 
-  const escpBytes = [0x1b, 0x40, 0x1b, 0x43, 0x06, 0x1b, 0x32];
+  // ESC @ reset | ESC 2 (1/6") | ESC x 1 (NLQ, no draft) | ESC C 0 6 (página 6")
+  const escpBytes = [
+    0x1b, 0x40,
+    0x1b, 0x32,
+    0x1b, 0x78, 0x01,
+    0x1b, 0x43, 0x00, 0x06,
+  ];
 
-  for (let r = 0; r < maxRows; r++) {
+  let lastRowWithData = 0;
+  for (let r = maxRows - 1; r >= 0; r--) {
+    if (grid[r].join('').trim().length > 0) {
+      lastRowWithData = r;
+      break;
+    }
+  }
+
+  for (let r = 0; r <= lastRowWithData; r++) {
     const lineStr = grid[r].join('').trimEnd();
     if (lineStr.length > 0) {
       for (let c = 0; c < lineStr.length; c++) {
@@ -75,7 +91,7 @@ function buildChequeEscpPayload(data, offsets = {}) {
     escpBytes.push(0x0d, 0x0a);
   }
 
-  escpBytes.push(0x0c);
+  escpBytes.push(0x0c); // Form feed — expulsa el cheque
   return Buffer.from(escpBytes).toString('hex');
 }
 
