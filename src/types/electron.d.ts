@@ -1,4 +1,5 @@
 import type { CalibrationSettings, PrinterInfo } from "./calibration"
+import type { EstructuraRow } from "./emission"
 
 export interface Provider {
   id: string
@@ -25,6 +26,11 @@ export interface PrintPayload {
   monto: string
   montoLetras: string
   rtn?: string
+  descripciones?: string[]
+  estructura?: EstructuraRow[]
+  /** Orden de pago: asignado por API antes de imprimir */
+  numeroOrden?: number
+  numeroOrdenDisplay?: string
 }
 
 export interface PrintOffsets {
