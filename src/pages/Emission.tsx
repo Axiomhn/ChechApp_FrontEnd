@@ -38,6 +38,8 @@ import {
   DESCRIPCION_MAX_LENGTH,
   DETALLE_GASTO_MAX_LENGTH,
 } from "@/types/emission"
+import { reserveOrdenPagoNumber } from "@/api/orden-pago"
+import { isAxiosError } from "axios"
 
 const PROVIDER_SEARCH_LIMIT = 50
 
@@ -247,16 +249,35 @@ export default function EmissionPage() {
           letras_y: 0,
         }
 
+        let ordenNumero: { numero: number; display: string }
+        try {
+          ordenNumero = await reserveOrdenPagoNumber()
+        } catch (reserveErr) {
+          const apiMessage = isAxiosError(reserveErr)
+            ? (reserveErr.response?.data as { message?: string } | undefined)
+                ?.message
+            : undefined
+          setPrintError(
+            apiMessage ||
+              "No se pudo obtener el número de Orden de Pago. Verifique que el API esté en línea."
+          )
+          return
+        }
+
         const result = await api.print.graphical(
           printerName,
           "ORDEN_PAGO",
-          payload,
+          {
+            ...payload,
+            numeroOrden: ordenNumero.numero,
+            numeroOrdenDisplay: ordenNumero.display,
+          },
           offsets
         )
 
         if (result.success) {
           setPrintSuccess(
-            `Orden de Pago enviada a "${printerName}" correctamente.`
+            `Orden de Pago N° ${ordenNumero.display} enviada a "${printerName}" correctamente.`
           )
           setPrintModalOpen(false)
           setPendingPrintKind(null)

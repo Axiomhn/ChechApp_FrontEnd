@@ -49,8 +49,26 @@ const LUGAR_FECHA_FIELD_LEFT = 620;
 const UNIDAD_EJECUTORA_LEFT = 1100;
 const UNIDAD_EJECUTORA_ROW_TOP = 543;
 const UNIDAD_EJECUTORA_LINE = 'UNIDAD EJECUTORA: UMASENY';
+const ORDEN_NUMERO_LEFT = 1619;
+const ORDEN_NUMERO_TOP = 393;
+const ORDEN_NUMERO_PAD = 7;
 const LUGAR_FECHA_FIELD_MAX_WIDTH =
   UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - 16;
+
+function formatOrdenNumeroDisplay(value) {
+  const parsed = parseInt(String(value ?? '').replace(/\D/g, ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return '';
+  return String(parsed).padStart(ORDEN_NUMERO_PAD, '0');
+}
+
+function resolveOrdenNumeroDisplay(data) {
+  const fromDisplay = String(data?.numeroOrdenDisplay ?? '').trim();
+  if (fromDisplay) return formatOrdenNumeroDisplay(fromDisplay);
+  if (data?.numeroOrden != null && data.numeroOrden !== '') {
+    return formatOrdenNumeroDisplay(data.numeroOrden);
+  }
+  return '';
+}
 
 function getLugarFechaFontSize(text) {
   const value = String(text ?? '').trim();
@@ -467,8 +485,19 @@ function buildOrdenPagoHtml(data) {
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
   const monto = formatMontoDisplay(data.monto);
+  const numeroDisplay = resolveOrdenNumeroDisplay(data);
+  const numeroLine = numeroDisplay ? `N°. ${numeroDisplay}` : '';
 
   const fields = [
+    buildFieldDiv(
+      'orden-numero',
+      fieldStyle(
+        ORDEN_NUMERO_LEFT,
+        ORDEN_NUMERO_TOP,
+        "font-size:80px;font-family:'Arapey',Georgia,serif;width:367px;white-space:nowrap"
+      ),
+      numeroLine
+    ),
     buildFieldDiv(
       'orden-lugar-fecha',
       fieldStyle(
