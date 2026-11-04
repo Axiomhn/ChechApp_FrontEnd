@@ -30,6 +30,42 @@ function isVirtualPrinter(printerName) {
   );
 }
 
+/** Ancho máximo del campo "Cantidad en letras" en una línea ESC/P (columnas de carácter). */
+const MAX_MONTO_LETRAS_COLS = 64;
+
+/**
+ * Parte el monto en letras en líneas ≤ maxLen sin cortar palabras.
+ * @param {string} text
+ * @param {number} maxLen
+ * @returns {string[]}
+ */
+function wrapMontoLetrasLines(text, maxLen = MAX_MONTO_LETRAS_COLS) {
+  const trimmed = String(text ?? '').trim();
+  if (!trimmed) return [];
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxLen) {
+      current = candidate;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/** Posiciones base ESC/P (fila/col) calibradas LX-350 UMASENY; offsets UI suman encima. */
+const BASE_CHEQUE_FECHA = { r: 2, c: 36 };
+const BASE_CHEQUE_MONTO_NUM = { r: 6, c: 62 };
+const BASE_CHEQUE_BENEFICIARIO = { r: 6, c: 5 };
+const BASE_CHEQUE_MONTO_LETRAS = { r: 9, c: 6 };
+
 function buildChequeEscpPayload(data, offsets = {}) {
   // ~4" de área útil del cheque a 1/6" por línea (24 filas); página física 6" (ESC C 0 6).
   const maxRows = 24;
@@ -45,10 +81,22 @@ function buildChequeEscpPayload(data, offsets = {}) {
   const offLetrasX = parseInt(offsets.letras_x || 0, 10);
   const offLetrasY = parseInt(offsets.letras_y || 0, 10);
 
-  const posFecha = { r: 2 + offFechaY, c: 52 + offFechaX };
-  const posMontoNum = { r: 4 + offMontoY, c: 70 + offMontoX };
-  const posBeneficiario = { r: 6 + offBeneY, c: 15 + offBeneX };
-  const posMontoLetras = { r: 8 + offLetrasY, c: 8 + offLetrasX };
+  const posFecha = {
+    r: BASE_CHEQUE_FECHA.r + offFechaY,
+    c: BASE_CHEQUE_FECHA.c + offFechaX,
+  };
+  const posMontoNum = {
+    r: BASE_CHEQUE_MONTO_NUM.r + offMontoY,
+    c: BASE_CHEQUE_MONTO_NUM.c + offMontoX,
+  };
+  const posBeneficiario = {
+    r: BASE_CHEQUE_BENEFICIARIO.r + offBeneY,
+    c: BASE_CHEQUE_BENEFICIARIO.c + offBeneX,
+  };
+  const posMontoLetras = {
+    r: BASE_CHEQUE_MONTO_LETRAS.r + offLetrasY,
+    c: BASE_CHEQUE_MONTO_LETRAS.c + offLetrasX,
+  };
 
   const injectText = (text, row, col) => {
     if (row < 0 || row >= maxRows) return;
@@ -63,7 +111,14 @@ function buildChequeEscpPayload(data, offsets = {}) {
   injectText(data.fecha || '', posFecha.r, posFecha.c);
   injectText(data.monto || '', posMontoNum.r, posMontoNum.c);
   injectText(data.beneficiario || '', posBeneficiario.r, posBeneficiario.c);
-  injectText(data.montoLetras || data.montoLetters || '', posMontoLetras.r, posMontoLetras.c);
+
+  const montoLetrasText = data.montoLetras || data.montoLetters || '';
+  const montoLetrasLines = wrapMontoLetrasLines(montoLetrasText, MAX_MONTO_LETRAS_COLS);
+  montoLetrasLines.forEach((line, index) => {
+    const rowOffsetUp = montoLetrasLines.length - 1 - index;
+    const row = posMontoLetras.r - rowOffsetUp;
+    injectText(line, row, posMontoLetras.c);
+  });
 
   // ESC @ reset | ESC 2 (1/6") | ESC x 1 (NLQ, no draft) | ESC C 0 6 (página 6")
   const escpBytes = [
