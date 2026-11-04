@@ -30,6 +30,36 @@ function isVirtualPrinter(printerName) {
   );
 }
 
+/** Ancho máximo del campo "Cantidad en letras" en una línea ESC/P (columnas de carácter). */
+const MAX_MONTO_LETRAS_COLS = 64;
+
+/**
+ * Parte el monto en letras en líneas ≤ maxLen sin cortar palabras.
+ * @param {string} text
+ * @param {number} maxLen
+ * @returns {string[]}
+ */
+function wrapMontoLetrasLines(text, maxLen = MAX_MONTO_LETRAS_COLS) {
+  const trimmed = String(text ?? '').trim();
+  if (!trimmed) return [];
+
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length <= maxLen) {
+      current = candidate;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 function buildChequeEscpPayload(data, offsets = {}) {
   // ~4" de área útil del cheque a 1/6" por línea (24 filas); página física 6" (ESC C 0 6).
   const maxRows = 24;
@@ -63,7 +93,14 @@ function buildChequeEscpPayload(data, offsets = {}) {
   injectText(data.fecha || '', posFecha.r, posFecha.c);
   injectText(data.monto || '', posMontoNum.r, posMontoNum.c);
   injectText(data.beneficiario || '', posBeneficiario.r, posBeneficiario.c);
-  injectText(data.montoLetras || data.montoLetters || '', posMontoLetras.r, posMontoLetras.c);
+
+  const montoLetrasText = data.montoLetras || data.montoLetters || '';
+  const montoLetrasLines = wrapMontoLetrasLines(montoLetrasText, MAX_MONTO_LETRAS_COLS);
+  montoLetrasLines.forEach((line, index) => {
+    const rowOffsetUp = montoLetrasLines.length - 1 - index;
+    const row = posMontoLetras.r - rowOffsetUp;
+    injectText(line, row, posMontoLetras.c);
+  });
 
   // ESC @ reset | ESC 2 (1/6") | ESC x 1 (NLQ, no draft) | ESC C 0 6 (página 6")
   const escpBytes = [
