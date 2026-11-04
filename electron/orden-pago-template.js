@@ -2,6 +2,18 @@ const fs = require('fs');
 const path = require('path');
 
 const LAYOUT_PATH = path.join(__dirname, 'templates', 'orden-pago-layout.html');
+const LOGO_CANDIDATE_PATHS = [
+  path.join(__dirname, 'assets', 'logo.jfif'),
+  path.join(__dirname, '..', 'src', 'assets', 'logo.jfif'),
+];
+
+/** Logo UMASENY — esquina superior izquierda (coord. diseño 2480×3030). */
+const ORDEN_LOGO_LEFT = 156;
+const ORDEN_LOGO_TOP = 100;
+const ORDEN_LOGO_MAX_WIDTH = 420;
+const ORDEN_LOGO_MAX_HEIGHT = 220;
+
+let ordenLogoDataUriCache;
 
 /** Diseño Figma ~2480×3030px → carta 8.5"×11" (816×1056px @ 96dpi). */
 const DESIGN_WIDTH = 2480;
@@ -35,8 +47,28 @@ function formatMontoDisplay(monto) {
 
 const LUGAR_FECHA_FIELD_LEFT = 620;
 const UNIDAD_EJECUTORA_LEFT = 1100;
+const UNIDAD_EJECUTORA_ROW_TOP = 543;
+const UNIDAD_EJECUTORA_LINE = 'UNIDAD EJECUTORA: UMASENY';
+const ORDEN_NUMERO_LEFT = 1619;
+const ORDEN_NUMERO_TOP = 393;
+const ORDEN_NUMERO_PAD = 7;
 const LUGAR_FECHA_FIELD_MAX_WIDTH =
   UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - 16;
+
+function formatOrdenNumeroDisplay(value) {
+  const parsed = parseInt(String(value ?? '').replace(/\D/g, ''), 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return '';
+  return String(parsed).padStart(ORDEN_NUMERO_PAD, '0');
+}
+
+function resolveOrdenNumeroDisplay(data) {
+  const fromDisplay = String(data?.numeroOrdenDisplay ?? '').trim();
+  if (fromDisplay) return formatOrdenNumeroDisplay(fromDisplay);
+  if (data?.numeroOrden != null && data.numeroOrden !== '') {
+    return formatOrdenNumeroDisplay(data.numeroOrden);
+  }
+  return '';
+}
 
 function getLugarFechaFontSize(text) {
   const value = String(text ?? '').trim();
@@ -48,6 +80,28 @@ function getLugarFechaFontSize(text) {
 
 function getLayout() {
   return fs.readFileSync(LAYOUT_PATH, 'utf8');
+}
+
+function resolveOrdenLogoPath() {
+  return LOGO_CANDIDATE_PATHS.find((candidate) => fs.existsSync(candidate));
+}
+
+function getOrdenLogoDataUri() {
+  if (ordenLogoDataUriCache !== undefined) return ordenLogoDataUriCache;
+  const logoPath = resolveOrdenLogoPath();
+  if (!logoPath) {
+    ordenLogoDataUriCache = '';
+    return ordenLogoDataUriCache;
+  }
+  const buffer = fs.readFileSync(logoPath);
+  ordenLogoDataUriCache = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+  return ordenLogoDataUriCache;
+}
+
+function buildOrdenLogoMarkup() {
+  const dataUri = getOrdenLogoDataUri();
+  if (!dataUri) return '';
+  return `<img class="orden-logo" src="${dataUri}" alt="UMASENY" style="position:absolute;left:${ORDEN_LOGO_LEFT}px;top:${ORDEN_LOGO_TOP}px;max-width:${ORDEN_LOGO_MAX_WIDTH}px;max-height:${ORDEN_LOGO_MAX_HEIGHT}px;width:auto;height:auto;object-fit:contain;z-index:5;" />`;
 }
 
 function fieldStyle(left, top, extra = '') {
@@ -431,16 +485,36 @@ function buildOrdenPagoHtml(data) {
   const beneficiario = data.beneficiario || '';
   const montoLetras = data.montoLetras || data.montoLetters || '';
   const monto = formatMontoDisplay(data.monto);
+  const numeroDisplay = resolveOrdenNumeroDisplay(data);
+  const numeroLine = numeroDisplay ? `N°. ${numeroDisplay}` : '';
 
   const fields = [
+    buildFieldDiv(
+      'orden-numero',
+      fieldStyle(
+        ORDEN_NUMERO_LEFT,
+        ORDEN_NUMERO_TOP,
+        "font-size:80px;font-family:'Arapey',Georgia,serif;width:367px;white-space:nowrap"
+      ),
+      numeroLine
+    ),
     buildFieldDiv(
       'orden-lugar-fecha',
       fieldStyle(
         LUGAR_FECHA_FIELD_LEFT,
-        543,
+        UNIDAD_EJECUTORA_ROW_TOP,
         `font-size:${getLugarFechaFontSize(lugarFecha)}px;max-width:${LUGAR_FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
       ),
       lugarFecha
+    ),
+    buildFieldDiv(
+      'orden-unidad-ejecutora',
+      fieldStyle(
+        UNIDAD_EJECUTORA_LEFT,
+        UNIDAD_EJECUTORA_ROW_TOP,
+        'font-size:55px;white-space:nowrap'
+      ),
+      UNIDAD_EJECUTORA_LINE
     ),
     buildFieldDiv(
       'orden-beneficiario',
@@ -501,6 +575,10 @@ function buildOrdenPagoHtml(data) {
     .orden-field {
       word-wrap: break-word;
       overflow-wrap: break-word;
+    }
+    .orden-logo {
+      object-fit: contain;
+      pointer-events: none;
     }
     .orden-letras,
     .orden-letras-l1,
@@ -607,6 +685,7 @@ function buildOrdenPagoHtml(data) {
 </head>
 <body>
   <div class="orden-page">
+    ${buildOrdenLogoMarkup()}
     ${innerLayout}
   </div>
 </body>
