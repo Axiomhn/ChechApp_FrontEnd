@@ -12,6 +12,7 @@ export interface EmissionDraftState {
   fecha: string
   monto: string
   montoLetras: string
+  conceptoPago: string
   descripciones: string[]
   estructura: EstructuraRow[]
   selectedProvider: Provider | null
@@ -21,6 +22,7 @@ const initialState: EmissionDraftState = {
   fecha: generateDefaultFecha(),
   monto: "",
   montoLetras: "",
+  conceptoPago: "",
   descripciones: createEmptyDescripciones(),
   estructura: createEmptyEstructura(),
   selectedProvider: null,
@@ -39,6 +41,9 @@ const emissionDraftSlice = createSlice({
     setMontoLetras: (state, action: PayloadAction<string>) => {
       state.montoLetras = action.payload
     },
+    setConceptoPago: (state, action: PayloadAction<string>) => {
+      state.conceptoPago = action.payload
+    },
     setDescripciones: (state, action: PayloadAction<string[]>) => {
       state.descripciones = action.payload
     },
@@ -56,6 +61,7 @@ export const {
   setFecha,
   setMonto,
   setMontoLetras,
+  setConceptoPago,
   setDescripciones,
   setEstructura,
   setSelectedProvider,

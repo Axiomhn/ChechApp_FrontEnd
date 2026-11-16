@@ -17,6 +17,14 @@ export interface AppSettings {
   offset_cheque_beneficiario_y?: string
   offset_cheque_letras_x?: string
   offset_cheque_letras_y?: string
+  offset_codo_beneficiario_x?: string
+  offset_codo_beneficiario_y?: string
+  offset_codo_monto_x?: string
+  offset_codo_monto_y?: string
+  offset_codo_letras_x?: string
+  offset_codo_letras_y?: string
+  offset_codo_concepto_x?: string
+  offset_codo_concepto_y?: string
   fuente_tamano?: string
 }
 
@@ -25,6 +33,10 @@ export interface PrintPayload {
   beneficiario: string
   monto: string
   montoLetras: string
+  /** Concepto impreso en el codo del cheque (solo ESC/P). */
+  conceptoPago?: string
+  /** Si es false, no se imprime el codo al enviar el cheque (ESC/P). */
+  llenarCodo?: boolean
   rtn?: string
   descripciones?: string[]
   estructura?: EstructuraRow[]
@@ -42,6 +54,14 @@ export interface PrintOffsets {
   beneficiario_y: number
   letras_x: number
   letras_y: number
+  codo_beneficiario_x: number
+  codo_beneficiario_y: number
+  codo_monto_x: number
+  codo_monto_y: number
+  codo_letras_x: number
+  codo_letras_y: number
+  codo_concepto_x: number
+  codo_concepto_y: number
 }
 
 interface ApiResult<T = unknown> {

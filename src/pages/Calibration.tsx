@@ -25,6 +25,14 @@ function mapApiSettings(data: AppSettings): CalibrationSettings {
     offset_cheque_beneficiario_y: parseInt(data.offset_cheque_beneficiario_y ?? "0"),
     offset_cheque_letras_x: parseInt(data.offset_cheque_letras_x ?? "0"),
     offset_cheque_letras_y: parseInt(data.offset_cheque_letras_y ?? "0"),
+    offset_codo_beneficiario_x: parseInt(data.offset_codo_beneficiario_x ?? "0"),
+    offset_codo_beneficiario_y: parseInt(data.offset_codo_beneficiario_y ?? "0"),
+    offset_codo_monto_x: parseInt(data.offset_codo_monto_x ?? "0"),
+    offset_codo_monto_y: parseInt(data.offset_codo_monto_y ?? "0"),
+    offset_codo_letras_x: parseInt(data.offset_codo_letras_x ?? "0"),
+    offset_codo_letras_y: parseInt(data.offset_codo_letras_y ?? "0"),
+    offset_codo_concepto_x: parseInt(data.offset_codo_concepto_x ?? "0"),
+    offset_codo_concepto_y: parseInt(data.offset_codo_concepto_y ?? "0"),
     fuente_tamano: parseInt(data.fuente_tamano ?? "12"),
   }
 }
@@ -41,6 +49,22 @@ const OFFSET_SUMMARY = [
   { label: "Nombre", xKey: "offset_cheque_beneficiario_x", yKey: "offset_cheque_beneficiario_y" },
   { label: "Letras", xKey: "offset_cheque_letras_x", yKey: "offset_cheque_letras_y" },
   { label: "Monto", xKey: "offset_cheque_monto_x", yKey: "offset_cheque_monto_y" },
+  {
+    label: "Codo — Páguese a",
+    xKey: "offset_codo_beneficiario_x",
+    yKey: "offset_codo_beneficiario_y",
+  },
+  { label: "Codo — LPS.", xKey: "offset_codo_monto_x", yKey: "offset_codo_monto_y" },
+  {
+    label: "Codo — Letras",
+    xKey: "offset_codo_letras_x",
+    yKey: "offset_codo_letras_y",
+  },
+  {
+    label: "Codo — Concepto",
+    xKey: "offset_codo_concepto_x",
+    yKey: "offset_codo_concepto_y",
+  },
 ] as const
 
 function withResetOffsets(settings: CalibrationSettings): CalibrationSettings {
@@ -54,6 +78,14 @@ function withResetOffsets(settings: CalibrationSettings): CalibrationSettings {
     offset_cheque_beneficiario_y: 0,
     offset_cheque_letras_x: 0,
     offset_cheque_letras_y: 0,
+    offset_codo_beneficiario_x: 0,
+    offset_codo_beneficiario_y: 0,
+    offset_codo_monto_x: 0,
+    offset_codo_monto_y: 0,
+    offset_codo_letras_x: 0,
+    offset_codo_letras_y: 0,
+    offset_codo_concepto_x: 0,
+    offset_codo_concepto_y: 0,
   }
 }
 
@@ -181,6 +213,11 @@ export default function CalibrationPage() {
             </div>
           </div>
           <div className="card-body">
+            <h3 className="calibration-section-title">Cheque Principal</h3>
+            <p className="calibration-section-hint">
+              Parte superior del formulario (fecha, beneficiario, monto y letras
+              del cheque).
+            </p>
             <div className="calibration-offset-grid">
               <OffsetCard
                 number="F"
@@ -211,6 +248,48 @@ export default function CalibrationPage() {
                 fieldName="Monto en Números (L.)"
                 xKey="offset_cheque_monto_x"
                 yKey="offset_cheque_monto_y"
+                settings={settings}
+                onChange={setSettings}
+              />
+            </div>
+
+            <h3 className="calibration-section-title calibration-section-title-spaced">
+              Codo del cheque
+            </h3>
+            <p className="calibration-section-hint">
+              Comprobante inferior (perforación parte 1): beneficiario, LPS,
+              cantidad en letras y concepto de pago.
+            </p>
+            <div className="calibration-offset-grid">
+              <OffsetCard
+                number="P"
+                fieldName="Páguese a"
+                xKey="offset_codo_beneficiario_x"
+                yKey="offset_codo_beneficiario_y"
+                settings={settings}
+                onChange={setSettings}
+              />
+              <OffsetCard
+                number="$"
+                fieldName="LPS. (Monto numérico)"
+                xKey="offset_codo_monto_x"
+                yKey="offset_codo_monto_y"
+                settings={settings}
+                onChange={setSettings}
+              />
+              <OffsetCard
+                number="CL"
+                fieldName="Cantidad en Letras"
+                xKey="offset_codo_letras_x"
+                yKey="offset_codo_letras_y"
+                settings={settings}
+                onChange={setSettings}
+              />
+              <OffsetCard
+                number="C"
+                fieldName="Concepto de Pago"
+                xKey="offset_codo_concepto_x"
+                yKey="offset_codo_concepto_y"
                 settings={settings}
                 onChange={setSettings}
               />
@@ -323,7 +402,7 @@ export default function CalibrationPage() {
       <ConfirmModal
         open={showResetModal}
         title="Restablecer Offsets"
-        message="¿Restablecer todos los offsets del cheque a cero (0)? Esta acción afectará la calibración de fecha, beneficiario, letras y monto."
+        message="¿Restablecer todos los offsets del cheque y del codo a cero (0)? Esta acción afectará la calibración del cheque principal y del comprobante inferior."
         confirmLabel="Sí, restablecer"
         cancelLabel="Cancelar"
         variant="warning"

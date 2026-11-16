@@ -19,11 +19,13 @@ import {
   parseMontoInput,
 } from "@/lib/monto-format"
 import { numberToLetters } from "@/lib/numberToLetters"
+import { toPrintText } from "@/lib/print-text"
 import { getAppApi } from "@/lib/app-api"
 import type { AppSettings } from "@/types/electron"
 import type { Provider } from "@/types/provider"
 import type { RootState } from "@/store"
 import {
+  setConceptoPago,
   setDescripciones,
   setEstructura,
   setFecha,
@@ -35,6 +37,7 @@ import PrintPrinterModal, {
   type PrintDocumentKind,
 } from "@/components/emission/PrintPrinterModal"
 import {
+  CONCEPTO_PAGO_MAX_LENGTH,
   DESCRIPCION_MAX_LENGTH,
   DETALLE_GASTO_MAX_LENGTH,
 } from "@/types/emission"
@@ -49,6 +52,7 @@ export default function EmissionPage() {
     fecha,
     monto,
     montoLetras,
+    conceptoPago,
     descripciones,
     estructura,
     selectedProvider,
@@ -65,6 +69,8 @@ export default function EmissionPage() {
   const [printModalSession, setPrintModalSession] = useState(0)
   const [pendingPrintKind, setPendingPrintKind] =
     useState<PrintDocumentKind | null>(null)
+  /** Solo esta sesión de la app; no se persiste al cerrar. */
+  const [llenarCodoCheque, setLlenarCodoCheque] = useState(true)
 
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -195,14 +201,15 @@ export default function EmissionPage() {
   }
 
   const buildPrintPayload = () => ({
-    fecha,
-    beneficiario,
+    fecha: toPrintText(fecha),
+    beneficiario: toPrintText(beneficiario),
     monto: formatMontoNumber(montoNumerico!),
-    montoLetras,
-    descripciones: descripciones.map((row) => row.trim()),
+    montoLetras: toPrintText(montoLetras),
+    conceptoPago: toPrintText(conceptoPago.trim()),
+    descripciones: descripciones.map((row) => toPrintText(row.trim())),
     estructura: estructura.map((row) => ({
-      detalle: row.detalle.trim(),
-      subTotal: row.subTotal.trim(),
+      detalle: toPrintText(row.detalle.trim()),
+      subTotal: toPrintText(row.subTotal.trim()),
     })),
   })
 
@@ -247,6 +254,14 @@ export default function EmissionPage() {
           beneficiario_y: 0,
           letras_x: 0,
           letras_y: 0,
+          codo_beneficiario_x: 0,
+          codo_beneficiario_y: 0,
+          codo_monto_x: 0,
+          codo_monto_y: 0,
+          codo_letras_x: 0,
+          codo_letras_y: 0,
+          codo_concepto_x: 0,
+          codo_concepto_y: 0,
         }
 
         let ordenNumero: { numero: number; display: string }
@@ -298,12 +313,20 @@ export default function EmissionPage() {
         beneficiario_y: parseInt(cfg?.offset_cheque_beneficiario_y || "0"),
         letras_x: parseInt(cfg?.offset_cheque_letras_x || "0"),
         letras_y: parseInt(cfg?.offset_cheque_letras_y || "0"),
+        codo_beneficiario_x: parseInt(cfg?.offset_codo_beneficiario_x || "0"),
+        codo_beneficiario_y: parseInt(cfg?.offset_codo_beneficiario_y || "0"),
+        codo_monto_x: parseInt(cfg?.offset_codo_monto_x || "0"),
+        codo_monto_y: parseInt(cfg?.offset_codo_monto_y || "0"),
+        codo_letras_x: parseInt(cfg?.offset_codo_letras_x || "0"),
+        codo_letras_y: parseInt(cfg?.offset_codo_letras_y || "0"),
+        codo_concepto_x: parseInt(cfg?.offset_codo_concepto_x || "0"),
+        codo_concepto_y: parseInt(cfg?.offset_codo_concepto_y || "0"),
       }
 
       const result = await api.print.nativeEscP(
         printerName,
         "CHEQUE",
-        payload,
+        { ...payload, llenarCodo: llenarCodoCheque },
         offsets
       )
 
@@ -359,6 +382,8 @@ export default function EmissionPage() {
             </div>
           </div>
           <div className="card-body">
+            <h3 className="emission-cheque-section-title">Cheque Principal</h3>
+
             <div className="form-group">
               <label htmlFor="fecha">
                 <Calendar
@@ -534,6 +559,52 @@ export default function EmissionPage() {
                   "Ingrese un monto para ver la conversión en letras"
                 )}
               </div>
+            </div>
+
+            <h3 className="emission-cheque-section-title emission-cheque-section-title-spaced">
+              Codo del cheque
+            </h3>
+
+            <div className="form-group emission-codo-toggle-group">
+              <label className="emission-codo-toggle" htmlFor="llenar-codo-cheque">
+                <input
+                  id="llenar-codo-cheque"
+                  type="checkbox"
+                  checked={llenarCodoCheque}
+                  onChange={(e) => setLlenarCodoCheque(e.target.checked)}
+                />
+                <span>Llenar codo de cheque</span>
+              </label>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="concepto-pago">
+                <FileText
+                  size={13}
+                  style={{ verticalAlign: "middle", marginRight: "5px" }}
+                />
+                Concepto de Pago
+              </label>
+              <input
+                id="concepto-pago"
+                type="text"
+                value={conceptoPago}
+                maxLength={CONCEPTO_PAGO_MAX_LENGTH}
+                disabled={!llenarCodoCheque}
+                onChange={(e) =>
+                  dispatch(
+                    setConceptoPago(
+                      e.target.value.slice(0, CONCEPTO_PAGO_MAX_LENGTH)
+                    )
+                  )
+                }
+                placeholder="Motivo del pago en el codo del cheque"
+                autoComplete="off"
+              />
+              <span className="calibration-field-hint">
+                Opcional. Solo se imprime si «Llenar codo de cheque» está
+                marcado.
+              </span>
             </div>
 
             <div className="emission-tables-section">

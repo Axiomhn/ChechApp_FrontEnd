@@ -7,6 +7,14 @@ export interface CalibrationSettings {
   offset_cheque_beneficiario_y: number
   offset_cheque_letras_x: number
   offset_cheque_letras_y: number
+  offset_codo_beneficiario_x: number
+  offset_codo_beneficiario_y: number
+  offset_codo_monto_x: number
+  offset_codo_monto_y: number
+  offset_codo_letras_x: number
+  offset_codo_letras_y: number
+  offset_codo_concepto_x: number
+  offset_codo_concepto_y: number
   fuente_tamano: number
 }
 
@@ -19,6 +27,14 @@ export const defaultCalibrationSettings = (): CalibrationSettings => ({
   offset_cheque_beneficiario_y: 0,
   offset_cheque_letras_x: 0,
   offset_cheque_letras_y: 0,
+  offset_codo_beneficiario_x: 0,
+  offset_codo_beneficiario_y: 0,
+  offset_codo_monto_x: 0,
+  offset_codo_monto_y: 0,
+  offset_codo_letras_x: 0,
+  offset_codo_letras_y: 0,
+  offset_codo_concepto_x: 0,
+  offset_codo_concepto_y: 0,
   fuente_tamano: 12,
 })
 

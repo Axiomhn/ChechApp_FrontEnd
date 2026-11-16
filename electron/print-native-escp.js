@@ -32,6 +32,9 @@ function isVirtualPrinter(printerName) {
 
 /** Ancho máximo del campo "Cantidad en letras" en una línea ESC/P (columnas de carácter). */
 const MAX_MONTO_LETRAS_COLS = 64;
+/** Codo del cheque: ancho útil por línea (formulario continuo 8.5" @ 10 CPI). */
+const MAX_CODO_LETRAS_COLS = 64;
+const MAX_CODO_CONCEPTO_COLS = 64;
 
 /**
  * Parte el monto en letras en líneas ≤ maxLen sin cortar palabras.
@@ -39,7 +42,11 @@ const MAX_MONTO_LETRAS_COLS = 64;
  * @param {number} maxLen
  * @returns {string[]}
  */
-function wrapMontoLetrasLines(text, maxLen = MAX_MONTO_LETRAS_COLS) {
+function toPrintText(value) {
+  return String(value ?? '').toLocaleUpperCase('es-HN');
+}
+
+function wrapTextLines(text, maxLen) {
   const trimmed = String(text ?? '').trim();
   if (!trimmed) return [];
 
@@ -66,9 +73,17 @@ const BASE_CHEQUE_MONTO_NUM = { r: 6, c: 62 };
 const BASE_CHEQUE_BENEFICIARIO = { r: 6, c: 5 };
 const BASE_CHEQUE_MONTO_LETRAS = { r: 9, c: 6 };
 
+/** Codo (desde PERFORACIÓN PARTE 1): posiciones base según arte del formulario 8.5"×6" @ 6 LPI. */
+const BASE_CODO_BENEFICIARIO = { r: 22, c: 12 };
+/** Misma columna base X que Monto en Números (M) del cheque principal; offset X propio del codo. */
+const BASE_CODO_MONTO_NUM = { r: 22, c: BASE_CHEQUE_MONTO_NUM.c };
+/** Margen izquierdo ×3 respecto a col 6 → columna 18. Letras base un renglón arriba (26→25). */
+const BASE_CODO_MONTO_LETRAS = { r: 25, c: 18 };
+const BASE_CODO_CONCEPTO = { r: 28, c: 18 };
+
 function buildChequeEscpPayload(data, offsets = {}) {
-  // ~4" de área útil del cheque a 1/6" por línea (24 filas); página física 6" (ESC C 0 6).
-  const maxRows = 24;
+  // Cheque + codo: 6" de alto → 36 filas a 6 LPI; offsets por sección desde Ajustes de cheque.
+  const maxRows = 36;
   const maxCols = 85;
   const grid = Array.from({ length: maxRows }, () => Array(maxCols).fill(' '));
 
@@ -80,6 +95,14 @@ function buildChequeEscpPayload(data, offsets = {}) {
   const offBeneY = parseInt(offsets.beneficiario_y || 0, 10);
   const offLetrasX = parseInt(offsets.letras_x || 0, 10);
   const offLetrasY = parseInt(offsets.letras_y || 0, 10);
+  const offCodoBeneX = parseInt(offsets.codo_beneficiario_x || 0, 10);
+  const offCodoBeneY = parseInt(offsets.codo_beneficiario_y || 0, 10);
+  const offCodoMontoX = parseInt(offsets.codo_monto_x || 0, 10);
+  const offCodoMontoY = parseInt(offsets.codo_monto_y || 0, 10);
+  const offCodoLetrasX = parseInt(offsets.codo_letras_x || 0, 10);
+  const offCodoLetrasY = parseInt(offsets.codo_letras_y || 0, 10);
+  const offCodoConceptoX = parseInt(offsets.codo_concepto_x || 0, 10);
+  const offCodoConceptoY = parseInt(offsets.codo_concepto_y || 0, 10);
 
   const posFecha = {
     r: BASE_CHEQUE_FECHA.r + offFechaY,
@@ -97,11 +120,27 @@ function buildChequeEscpPayload(data, offsets = {}) {
     r: BASE_CHEQUE_MONTO_LETRAS.r + offLetrasY,
     c: BASE_CHEQUE_MONTO_LETRAS.c + offLetrasX,
   };
+  const posCodoBeneficiario = {
+    r: BASE_CODO_BENEFICIARIO.r + offCodoBeneY,
+    c: BASE_CODO_BENEFICIARIO.c + offCodoBeneX,
+  };
+  const posCodoMontoNum = {
+    r: BASE_CODO_MONTO_NUM.r + offCodoMontoY,
+    c: BASE_CODO_MONTO_NUM.c + offCodoMontoX,
+  };
+  const posCodoMontoLetras = {
+    r: BASE_CODO_MONTO_LETRAS.r + offCodoLetrasY,
+    c: BASE_CODO_MONTO_LETRAS.c + offCodoLetrasX,
+  };
+  const posCodoConcepto = {
+    r: BASE_CODO_CONCEPTO.r + offCodoConceptoY,
+    c: BASE_CODO_CONCEPTO.c + offCodoConceptoX,
+  };
 
   const injectText = (text, row, col) => {
     if (row < 0 || row >= maxRows) return;
     const startCol = Math.max(0, Math.min(col, maxCols - 1));
-    const strText = String(text);
+    const strText = toPrintText(text);
     const len = Math.min(strText.length, maxCols - startCol);
     for (let i = 0; i < len; i++) {
       grid[row][startCol + i] = strText[i];
@@ -113,12 +152,36 @@ function buildChequeEscpPayload(data, offsets = {}) {
   injectText(data.beneficiario || '', posBeneficiario.r, posBeneficiario.c);
 
   const montoLetrasText = data.montoLetras || data.montoLetters || '';
-  const montoLetrasLines = wrapMontoLetrasLines(montoLetrasText, MAX_MONTO_LETRAS_COLS);
+  const montoLetrasLines = wrapTextLines(montoLetrasText, MAX_MONTO_LETRAS_COLS);
   montoLetrasLines.forEach((line, index) => {
     const rowOffsetUp = montoLetrasLines.length - 1 - index;
     const row = posMontoLetras.r - rowOffsetUp;
     injectText(line, row, posMontoLetras.c);
   });
+
+  const llenarCodo = data.llenarCodo !== false;
+  if (llenarCodo) {
+    injectText(data.beneficiario || '', posCodoBeneficiario.r, posCodoBeneficiario.c);
+    injectText(data.monto || '', posCodoMontoNum.r, posCodoMontoNum.c);
+
+    const codoLetrasLines = wrapTextLines(montoLetrasText, MAX_CODO_LETRAS_COLS).slice(
+      0,
+      2
+    );
+    codoLetrasLines.forEach((line, index) => {
+      const rowOffsetUp = codoLetrasLines.length - 1 - index;
+      const row = posCodoMontoLetras.r - rowOffsetUp;
+      injectText(line, row, posCodoMontoLetras.c);
+    });
+
+    const conceptoText = data.conceptoPago || data.concepto_pago || '';
+    const conceptoLines = wrapTextLines(conceptoText, MAX_CODO_CONCEPTO_COLS);
+    conceptoLines.forEach((line, index) => {
+      const rowOffsetUp = conceptoLines.length - 1 - index;
+      const row = posCodoConcepto.r - rowOffsetUp;
+      injectText(line, row, posCodoConcepto.c);
+    });
+  }
 
   // ESC @ reset | ESC 2 (1/6") | ESC x 1 (NLQ, no draft) | ESC C 0 6 (página 6")
   const escpBytes = [
@@ -181,6 +244,24 @@ function sendRawToPrinter(printerName, hexPayload) {
   });
 }
 
+async function tryDevPdfChequePrint(printerName, documentType, data, offsets) {
+  try {
+    const dev = require('./dev-pdf-cheque.local.cjs');
+    if (
+      dev?.enabled &&
+      documentType === 'CHEQUE' &&
+      isVirtualPrinter(printerName)
+    ) {
+      return dev.printChequeToPdf(printerName, data, offsets);
+    }
+  } catch (err) {
+    if (err?.code !== 'MODULE_NOT_FOUND') {
+      console.warn('[dev-pdf-cheque]', err);
+    }
+  }
+  return null;
+}
+
 async function printNativeEscP(printerName, documentType, data, offsets = {}) {
   if (!printerName?.trim()) {
     return {
@@ -195,6 +276,16 @@ async function printNativeEscP(printerName, documentType, data, offsets = {}) {
       success: false,
       error: 'La orden de pago se imprime en modo gráfico (plantilla HTML).',
     };
+  }
+
+  const devPdfResult = await tryDevPdfChequePrint(
+    printerName,
+    documentType,
+    data,
+    offsets
+  );
+  if (devPdfResult) {
+    return devPdfResult;
   }
 
   if (isVirtualPrinter(printerName)) {
