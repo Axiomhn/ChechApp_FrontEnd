@@ -15,6 +15,14 @@ export const defaultAppSettings = (): AppSettings => {
     offset_cheque_beneficiario_y: String(defaults.offset_cheque_beneficiario_y),
     offset_cheque_letras_x: String(defaults.offset_cheque_letras_x),
     offset_cheque_letras_y: String(defaults.offset_cheque_letras_y),
+    offset_codo_beneficiario_x: String(defaults.offset_codo_beneficiario_x),
+    offset_codo_beneficiario_y: String(defaults.offset_codo_beneficiario_y),
+    offset_codo_monto_x: String(defaults.offset_codo_monto_x),
+    offset_codo_monto_y: String(defaults.offset_codo_monto_y),
+    offset_codo_letras_x: String(defaults.offset_codo_letras_x),
+    offset_codo_letras_y: String(defaults.offset_codo_letras_y),
+    offset_codo_concepto_x: String(defaults.offset_codo_concepto_x),
+    offset_codo_concepto_y: String(defaults.offset_codo_concepto_y),
     fuente_tamano: String(defaults.fuente_tamano),
   }
 }
@@ -29,6 +37,14 @@ export function settingsToAppSettings(settings: CalibrationSettings): AppSetting
     offset_cheque_beneficiario_y: String(settings.offset_cheque_beneficiario_y),
     offset_cheque_letras_x: String(settings.offset_cheque_letras_x),
     offset_cheque_letras_y: String(settings.offset_cheque_letras_y),
+    offset_codo_beneficiario_x: String(settings.offset_codo_beneficiario_x),
+    offset_codo_beneficiario_y: String(settings.offset_codo_beneficiario_y),
+    offset_codo_monto_x: String(settings.offset_codo_monto_x),
+    offset_codo_monto_y: String(settings.offset_codo_monto_y),
+    offset_codo_letras_x: String(settings.offset_codo_letras_x),
+    offset_codo_letras_y: String(settings.offset_codo_letras_y),
+    offset_codo_concepto_x: String(settings.offset_codo_concepto_x),
+    offset_codo_concepto_y: String(settings.offset_codo_concepto_y),
     fuente_tamano: String(settings.fuente_tamano),
   }
 }

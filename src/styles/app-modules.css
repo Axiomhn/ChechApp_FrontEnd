@@ -639,6 +639,42 @@
   width: 100%;
 }
 
+.app-shell .emission-cheque-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 14px;
+}
+
+.app-shell .emission-cheque-section-title-spaced {
+  margin-top: 6px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.app-shell .emission-codo-toggle-group {
+  margin-bottom: 14px;
+}
+
+.app-shell .emission-codo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-shell .emission-codo-toggle input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--navy);
+  cursor: pointer;
+}
+
 .app-shell .emission-tables-section {
   border-top: 1px solid var(--border);
   padding-top: 20px;
@@ -1397,6 +1433,26 @@
 .app-shell .calibration-info-text {
   font-size: 12px;
   line-height: 1.5;
+}
+
+.app-shell .calibration-section-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 6px;
+}
+
+.app-shell .calibration-section-title-spaced {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.app-shell .calibration-section-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 14px;
+  line-height: 1.45;
 }
 
 .app-shell .calibration-offset-grid {

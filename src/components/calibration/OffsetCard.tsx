@@ -1,17 +1,7 @@
 import type { Dispatch, SetStateAction } from "react"
 import type { CalibrationSettings } from "@/types/calibration"
 
-type OffsetKey = keyof Pick<
-  CalibrationSettings,
-  | "offset_cheque_fecha_x"
-  | "offset_cheque_fecha_y"
-  | "offset_cheque_monto_x"
-  | "offset_cheque_monto_y"
-  | "offset_cheque_beneficiario_x"
-  | "offset_cheque_beneficiario_y"
-  | "offset_cheque_letras_x"
-  | "offset_cheque_letras_y"
->
+type OffsetKey = Exclude<keyof CalibrationSettings, "fuente_tamano">
 
 interface OffsetControlProps {
   label: string
