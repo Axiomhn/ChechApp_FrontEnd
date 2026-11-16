@@ -34,7 +34,7 @@ function isVirtualPrinter(printerName) {
 const MAX_MONTO_LETRAS_COLS = 64;
 /** Codo del cheque: ancho útil por línea (formulario continuo 8.5" @ 10 CPI). */
 const MAX_CODO_LETRAS_COLS = 64;
-const MAX_CODO_CONCEPTO_COLS = 70;
+const MAX_CODO_CONCEPTO_COLS = 64;
 
 /**
  * Parte el monto en letras en líneas ≤ maxLen sin cortar palabras.
@@ -74,10 +74,12 @@ const BASE_CHEQUE_BENEFICIARIO = { r: 6, c: 5 };
 const BASE_CHEQUE_MONTO_LETRAS = { r: 9, c: 6 };
 
 /** Codo (desde PERFORACIÓN PARTE 1): posiciones base según arte del formulario 8.5"×6" @ 6 LPI. */
-const BASE_CODO_BENEFICIARIO = { r: 22, c: 18 };
-const BASE_CODO_MONTO_NUM = { r: 22, c: 58 };
-const BASE_CODO_MONTO_LETRAS = { r: 26, c: 6 };
-const BASE_CODO_CONCEPTO = { r: 27, c: 6 };
+const BASE_CODO_BENEFICIARIO = { r: 22, c: 12 };
+/** Misma columna base X que Monto en Números (M) del cheque principal; offset X propio del codo. */
+const BASE_CODO_MONTO_NUM = { r: 22, c: BASE_CHEQUE_MONTO_NUM.c };
+/** Margen izquierdo ×3 respecto a col 6 → columna 18. Letras base un renglón arriba (26→25). */
+const BASE_CODO_MONTO_LETRAS = { r: 25, c: 18 };
+const BASE_CODO_CONCEPTO = { r: 28, c: 18 };
 
 function buildChequeEscpPayload(data, offsets = {}) {
   // Cheque + codo: 6" de alto → 36 filas a 6 LPI; offsets por sección desde Ajustes de cheque.
@@ -242,6 +244,24 @@ function sendRawToPrinter(printerName, hexPayload) {
   });
 }
 
+async function tryDevPdfChequePrint(printerName, documentType, data, offsets) {
+  try {
+    const dev = require('./dev-pdf-cheque.local.cjs');
+    if (
+      dev?.enabled &&
+      documentType === 'CHEQUE' &&
+      isVirtualPrinter(printerName)
+    ) {
+      return dev.printChequeToPdf(printerName, data, offsets);
+    }
+  } catch (err) {
+    if (err?.code !== 'MODULE_NOT_FOUND') {
+      console.warn('[dev-pdf-cheque]', err);
+    }
+  }
+  return null;
+}
+
 async function printNativeEscP(printerName, documentType, data, offsets = {}) {
   if (!printerName?.trim()) {
     return {
@@ -256,6 +276,16 @@ async function printNativeEscP(printerName, documentType, data, offsets = {}) {
       success: false,
       error: 'La orden de pago se imprime en modo gráfico (plantilla HTML).',
     };
+  }
+
+  const devPdfResult = await tryDevPdfChequePrint(
+    printerName,
+    documentType,
+    data,
+    offsets
+  );
+  if (devPdfResult) {
+    return devPdfResult;
   }
 
   if (isVirtualPrinter(printerName)) {
