@@ -2,6 +2,8 @@ export const DESCRIPCION_ROW_COUNT = 4
 export const ESTRUCTURA_ROW_COUNT = 5
 export const DESCRIPCION_MAX_LENGTH = 100
 export const DETALLE_GASTO_MAX_LENGTH = 80
+/** Línea de concepto en el codo del cheque (impresión matricial). */
+export const CONCEPTO_PAGO_MAX_LENGTH = 120
 
 export type EstructuraRow = {
   detalle: string
