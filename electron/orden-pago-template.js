@@ -46,14 +46,41 @@ function formatMontoDisplay(monto) {
 }
 
 const LUGAR_FECHA_FIELD_LEFT = 620;
-const UNIDAD_EJECUTORA_LEFT = 1100;
 const UNIDAD_EJECUTORA_ROW_TOP = 543;
 const UNIDAD_EJECUTORA_LINE = 'UNIDAD EJECUTORA: UMASENY';
+const UNIDAD_EJECUTORA_FONT_SIZE = 55;
+const ORDEN_PAGE_SIDE_MARGIN = 156;
+const LUGAR_FECHA_GAP_BEFORE_UNIDAD = 16;
+/** Valor de lugar/fecha: más pequeño que etiquetas (55px) para no invadir unidad ejecutora. */
+const LUGAR_FECHA_FONT_SIZE_MAX = 30;
+const LUGAR_FECHA_FONT_SIZE_MIN = 20;
+/** Factor conservador (mayúsculas Alexandria en PDF suelen ser más anchas que 0.52em). */
+const LUGAR_FECHA_WIDTH_CHAR_FACTOR = 0.58;
+const LUGAR_FECHA_WIDTH_SAFETY = 0.92;
+const LUGAR_FECHA_UNDERLINE_PAD_PX = 48;
+const LUGAR_FECHA_UNDERLINE_MIN_PX = 380;
+/** Holgura antes del bloque “Unidad ejecutora” para que la raya no lo cruza. */
+const LUGAR_FECHA_UNDERLINE_GAP_BEFORE_UNIDAD = 140;
+/** Ancho aproximado por carácter (unidad ejecutora, texto fijo). */
+const TEXT_WIDTH_CHAR_FACTOR = 0.52;
+
+function estimateTextWidthPx(charCount, fontSize) {
+  return Math.ceil(charCount * TEXT_WIDTH_CHAR_FACTOR * fontSize);
+}
+
+/** Unidad ejecutora alineada al margen derecho de la hoja (2480px de diseño). */
+const UNIDAD_EJECUTORA_TEXT_WIDTH = estimateTextWidthPx(
+  UNIDAD_EJECUTORA_LINE.length,
+  UNIDAD_EJECUTORA_FONT_SIZE
+);
+const UNIDAD_EJECUTORA_LEFT =
+  DESIGN_WIDTH - ORDEN_PAGE_SIDE_MARGIN - UNIDAD_EJECUTORA_TEXT_WIDTH;
+const LUGAR_FECHA_FIELD_MAX_WIDTH =
+  UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - LUGAR_FECHA_GAP_BEFORE_UNIDAD;
+
 const ORDEN_NUMERO_LEFT = 1619;
 const ORDEN_NUMERO_TOP = 393;
 const ORDEN_NUMERO_PAD = 7;
-const LUGAR_FECHA_FIELD_MAX_WIDTH =
-  UNIDAD_EJECUTORA_LEFT - LUGAR_FECHA_FIELD_LEFT - 16;
 
 function formatOrdenNumeroDisplay(value) {
   const parsed = parseInt(String(value ?? '').replace(/\D/g, ''), 10);
@@ -72,10 +99,36 @@ function resolveOrdenNumeroDisplay(data) {
 
 function getLugarFechaFontSize(text) {
   const value = String(text ?? '').trim();
-  if (!value) return 44;
+  if (!value) return LUGAR_FECHA_FONT_SIZE_MAX;
 
-  const size = Math.floor(LUGAR_FECHA_FIELD_MAX_WIDTH / (value.length * 0.52));
-  return Math.max(22, Math.min(44, size));
+  const usableWidth = LUGAR_FECHA_FIELD_MAX_WIDTH * LUGAR_FECHA_WIDTH_SAFETY;
+  const size = Math.floor(
+    usableWidth / (value.length * LUGAR_FECHA_WIDTH_CHAR_FACTOR)
+  );
+  return Math.max(
+    LUGAR_FECHA_FONT_SIZE_MIN,
+    Math.min(LUGAR_FECHA_FONT_SIZE_MAX, size)
+  );
+}
+
+function estimateLugarFechaTextWidth(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return LUGAR_FECHA_UNDERLINE_MIN_PX;
+  const fontSize = getLugarFechaFontSize(value);
+  return Math.ceil(value.length * LUGAR_FECHA_WIDTH_CHAR_FACTOR * fontSize);
+}
+
+function getLugarFechaUnderlineWidth(fecha) {
+  const textWidth = estimateLugarFechaTextWidth(fecha);
+  const withPad = textWidth + LUGAR_FECHA_UNDERLINE_PAD_PX;
+  const maxBeforeUnidad =
+    UNIDAD_EJECUTORA_LEFT -
+    LUGAR_FECHA_FIELD_LEFT -
+    LUGAR_FECHA_UNDERLINE_GAP_BEFORE_UNIDAD;
+  return Math.min(
+    maxBeforeUnidad,
+    Math.max(LUGAR_FECHA_UNDERLINE_MIN_PX, withPad)
+  );
 }
 
 function getLayout() {
@@ -174,6 +227,20 @@ function buildRow807StaticHtml() {
 
 function injectRow807Static(layout) {
   return layout.replace(ROW_807_STATIC_MARKER, buildRow807StaticHtml());
+}
+
+const LUGAR_FECHA_UNDERLINE_MARKER = '<!-- ORDEN_LUGAR_FECHA_UNDERLINE -->';
+
+function buildLugarFechaUnderlineHtml(fecha) {
+  const width = getLugarFechaUnderlineWidth(fecha);
+  return `<div class="orden-lugar-fecha-underline" aria-hidden="true" style="left:${LUGAR_FECHA_FIELD_LEFT}px;top:${UNIDAD_EJECUTORA_ROW_TOP}px;position:absolute;width:${width}px;height:52px;box-sizing:border-box;border-bottom:3px solid #000;z-index:1;pointer-events:none"></div>`;
+}
+
+function injectLugarFechaUnderline(layout, fecha) {
+  return layout.replace(
+    LUGAR_FECHA_UNDERLINE_MARKER,
+    buildLugarFechaUnderlineHtml(fecha)
+  );
 }
 
 function estimateMontoLetrasWidth(text, fontSize = MONTO_LETRAS_FONT_SIZE) {
@@ -503,17 +570,25 @@ function buildOrdenPagoHtml(data) {
       fieldStyle(
         LUGAR_FECHA_FIELD_LEFT,
         UNIDAD_EJECUTORA_ROW_TOP,
-        `font-size:${getLugarFechaFontSize(lugarFecha)}px;max-width:${LUGAR_FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden`
+        `font-size:${getLugarFechaFontSize(lugarFecha)}px;max-width:${LUGAR_FECHA_FIELD_MAX_WIDTH}px;white-space:nowrap;overflow:hidden;text-overflow:clip`
       ),
       lugarFecha
     ),
     buildFieldDiv(
       'orden-unidad-ejecutora',
-      fieldStyle(
-        UNIDAD_EJECUTORA_LEFT,
-        UNIDAD_EJECUTORA_ROW_TOP,
-        'font-size:55px;white-space:nowrap'
-      ),
+      [
+        `top:${UNIDAD_EJECUTORA_ROW_TOP}px`,
+        `right:${ORDEN_PAGE_SIDE_MARGIN}px`,
+        'left:auto',
+        'position:absolute',
+        'color:black',
+        "font-family:'Alexandria',Arial,sans-serif",
+        'font-weight:400',
+        'z-index:11',
+        `font-size:${UNIDAD_EJECUTORA_FONT_SIZE}px`,
+        'white-space:nowrap',
+        'text-align:right',
+      ].join(';'),
       UNIDAD_EJECUTORA_LINE
     ),
     buildFieldDiv(
@@ -535,7 +610,10 @@ function buildOrdenPagoHtml(data) {
     .filter(Boolean)
     .join('\n    ');
 
-  const rawLayout = injectRow807Static(fillOrdenTables(getLayout().trim(), data));
+  const rawLayout = injectLugarFechaUnderline(
+    injectRow807Static(fillOrdenTables(getLayout().trim(), data)),
+    lugarFecha
+  );
   const insertAt = rawLayout.lastIndexOf('</div>');
   const layout =
     insertAt === -1
