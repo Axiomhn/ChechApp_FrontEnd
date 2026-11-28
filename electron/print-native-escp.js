@@ -46,6 +46,27 @@ function toPrintText(value) {
   return String(value ?? '').toLocaleUpperCase('es-HN');
 }
 
+/**
+ * Convierte texto a bytes para ESC/P (tabla PC850 tras ESC t 2).
+ * En CP437, 0xC9 es un símbolo gráfico; con PC850 es "É".
+ */
+function appendEscpTextBytes(escpBytes, text) {
+  const str = String(text ?? '');
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code <= 0xff) {
+      escpBytes.push(code);
+      continue;
+    }
+    const folded = str[i]
+      .normalize('NFD')
+      .replace(/\p{M}/gu, '')
+      .toUpperCase();
+    const byte = folded.charCodeAt(0);
+    escpBytes.push(byte <= 0xff ? byte : 0x3f);
+  }
+}
+
 function wrapTextLines(text, maxLen) {
   const trimmed = String(text ?? '').trim();
   if (!trimmed) return [];
@@ -183,9 +204,10 @@ function buildChequeEscpPayload(data, offsets = {}) {
     });
   }
 
-  // ESC @ reset | ESC 2 (1/6") | ESC x 1 (NLQ, no draft) | ESC C 0 6 (página 6")
+  // ESC @ reset | ESC t 2 (PC850: tildes) | ESC 2 | NLQ | página 6"
   const escpBytes = [
     0x1b, 0x40,
+    0x1b, 0x74, 0x02,
     0x1b, 0x32,
     0x1b, 0x78, 0x01,
     0x1b, 0x43, 0x00, 0x06,
@@ -202,9 +224,7 @@ function buildChequeEscpPayload(data, offsets = {}) {
   for (let r = 0; r <= lastRowWithData; r++) {
     const lineStr = grid[r].join('').trimEnd();
     if (lineStr.length > 0) {
-      for (let c = 0; c < lineStr.length; c++) {
-        escpBytes.push(lineStr.charCodeAt(c));
-      }
+      appendEscpTextBytes(escpBytes, lineStr);
     }
     escpBytes.push(0x0d, 0x0a);
   }
